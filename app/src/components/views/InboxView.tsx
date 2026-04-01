@@ -39,6 +39,7 @@ export function InboxView({ store }: InboxViewProps) {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMobileChat, setShowMobileChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const conversations = store.getAllConversations();
@@ -56,6 +57,15 @@ export function InboxView({ store }: InboxViewProps) {
       store.sendMessage(selectedContactId, messageText.trim());
       setMessageText('');
     }
+  };
+
+  const handleSelectContact = (contactId: string) => {
+    setSelectedContactId(contactId);
+    setShowMobileChat(true);
+  };
+
+  const handleBackToList = () => {
+    setShowMobileChat(false);
   };
 
   useEffect(() => {
@@ -78,8 +88,10 @@ export function InboxView({ store }: InboxViewProps) {
     >
       {/* Left panel — conversation list */}
       <div
-        className="flex flex-col border-r border-[#2a3942]"
-        style={{ width: 360, background: '#111b21', flexShrink: 0 }}
+        className={`flex flex-col border-r border-[#2a3942] ${
+          showMobileChat ? 'hidden md:flex' : 'flex'
+        }`}
+        style={{ width: '100%', maxWidth: 360, background: '#111b21', flexShrink: 0 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3" style={{ background: '#202c33' }}>
@@ -113,7 +125,7 @@ export function InboxView({ store }: InboxViewProps) {
             return (
               <button
                 key={conv.contactId}
-                onClick={() => setSelectedContactId(conv.contactId)}
+                onClick={() => handleSelectContact(conv.contactId)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
                 style={{ background: isSelected ? '#2a3942' : 'transparent' }}
                 onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#202c33'; }}
@@ -153,13 +165,21 @@ export function InboxView({ store }: InboxViewProps) {
 
       {/* Right panel — chat */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`flex-1 flex flex-col min-w-0 ${
+          showMobileChat ? 'flex' : 'hidden md:flex'
+        }`}>
           {/* Chat header */}
           <div
             className="flex items-center justify-between px-4 py-2.5"
             style={{ background: '#202c33' }}
           >
             <div className="flex items-center gap-3">
+              <button
+                className="md:hidden p-2 rounded-full hover:bg-[#2a3942] transition-colors text-[#aebac1]"
+                onClick={handleBackToList}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <Avatar className="w-10 h-10">
                 <AvatarFallback className={`${getAvatarColor(selectedConversation.contact.name)} text-white text-sm`}>
                   {getInitials(selectedConversation.contact.name)}
@@ -267,7 +287,7 @@ export function InboxView({ store }: InboxViewProps) {
         </div>
       ) : (
         <div
-          className="flex-1 flex flex-col items-center justify-center gap-4"
+          className="flex-1 hidden md:flex flex-col items-center justify-center gap-4"
           style={{ background: '#222e35' }}
         >
           <div

@@ -138,21 +138,21 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Contacts</h1>
           <p className="text-slate-500">Manage your leads and contacts</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+          <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Import
           </Button>
-          <Button onClick={() => setShowAddModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button size="sm" onClick={() => setShowAddModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
             <Plus className="w-4 h-4 mr-2" />
             Add Contact
           </Button>
@@ -263,23 +263,23 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
 
       {/* Contacts Display */}
       {viewMode === 'table' ? (
-        <Card>
+        <Card className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
-                  <Checkbox 
+                  <Checkbox
                     checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>School</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Lead Score</TableHead>
-                <TableHead>Last Contact</TableHead>
+                <TableHead className="hidden md:table-cell">Course</TableHead>
+                <TableHead className="hidden lg:table-cell">School</TableHead>
+                <TableHead className="hidden lg:table-cell">Tags</TableHead>
+                <TableHead className="hidden md:table-cell">Lead Score</TableHead>
+                <TableHead className="hidden lg:table-cell">Last Contact</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -287,7 +287,7 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
               {filteredContacts.map((contact: Contact) => (
                 <TableRow key={contact.id}>
                   <TableCell>
-                    <Checkbox 
+                    <Checkbox
                       checked={selectedContacts.includes(contact.id)}
                       onCheckedChange={() => handleSelectContact(contact.id)}
                     />
@@ -310,9 +310,9 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
                       {contact.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{contact.course || '-'}</TableCell>
-                  <TableCell className="max-w-[150px] truncate">{contact.school || '-'}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">{contact.course || '-'}</TableCell>
+                  <TableCell className="hidden lg:table-cell max-w-[150px] truncate">{contact.school || '-'}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex gap-1 flex-wrap">
                       {contact.tags.slice(0, 2).map(tag => (
                         <Badge key={tag} variant="outline" className={getTagColor(tag)}>
@@ -324,13 +324,13 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-2">
                       <Progress value={contact.leadScore} className="w-16 h-2" />
                       <span className="text-sm">{contact.leadScore}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{formatRelativeTime(contact.lastContactedAt)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatRelativeTime(contact.lastContactedAt)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

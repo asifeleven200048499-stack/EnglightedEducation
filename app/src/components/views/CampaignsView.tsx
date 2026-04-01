@@ -71,12 +71,12 @@ export function CampaignsView({ store, setShowCampaignModal }: CampaignsViewProp
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Campaigns</h1>
           <p className="text-slate-500">Create and manage your WhatsApp campaigns</p>
         </div>
-        <Button onClick={() => setShowCampaignModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button size="sm" onClick={() => setShowCampaignModal(true)} className="bg-emerald-600 hover:bg-emerald-700 self-start sm:self-auto">
           <Plus className="w-4 h-4 mr-2" />
           New Campaign
         </Button>
@@ -178,25 +178,25 @@ export function CampaignsView({ store, setShowCampaignModal }: CampaignsViewProp
                   <p className="text-slate-500 text-sm mb-4">{campaign.description}</p>
                   
                   {/* Stats */}
-                  <div className="grid grid-cols-5 gap-4 mb-4">
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <p className="text-2xl font-bold">{campaign.totalRecipients}</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4 mb-4">
+                    <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-lg">
+                      <p className="text-lg sm:text-2xl font-bold">{campaign.totalRecipients}</p>
                       <p className="text-xs text-slate-500">Recipients</p>
                     </div>
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">{campaign.sentCount}</p>
+                    <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                      <p className="text-lg sm:text-2xl font-bold text-blue-600">{campaign.sentCount}</p>
                       <p className="text-xs text-slate-500">Sent</p>
                     </div>
-                    <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                      <p className="text-2xl font-bold text-emerald-600">{campaign.deliveredCount}</p>
+                    <div className="text-center p-2 sm:p-3 bg-emerald-50 rounded-lg">
+                      <p className="text-lg sm:text-2xl font-bold text-emerald-600">{campaign.deliveredCount}</p>
                       <p className="text-xs text-slate-500">Delivered</p>
                     </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <p className="text-2xl font-bold text-purple-600">{campaign.readCount}</p>
+                    <div className="text-center p-2 sm:p-3 bg-purple-50 rounded-lg">
+                      <p className="text-lg sm:text-2xl font-bold text-purple-600">{campaign.readCount}</p>
                       <p className="text-xs text-slate-500">Read</p>
                     </div>
-                    <div className="text-center p-3 bg-orange-50 rounded-lg">
-                      <p className="text-2xl font-bold text-orange-600">{campaign.repliedCount}</p>
+                    <div className="text-center p-2 sm:p-3 bg-orange-50 rounded-lg col-span-3 sm:col-span-1">
+                      <p className="text-lg sm:text-2xl font-bold text-orange-600">{campaign.repliedCount}</p>
                       <p className="text-xs text-slate-500">Replied</p>
                     </div>
                   </div>

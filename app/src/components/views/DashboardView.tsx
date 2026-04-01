@@ -63,19 +63,19 @@ export function DashboardView({ stats, store, setActiveView }: DashboardViewProp
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500">Welcome back! Here's what's happening with your leads.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setActiveView('contacts')}>
+          <Button variant="outline" size="sm" onClick={() => setActiveView('contacts')}>
             <Users className="w-4 h-4 mr-2" />
-            View Contacts
+            <span className="hidden sm:inline">View </span>Contacts
           </Button>
-          <Button onClick={() => setActiveView('campaigns')} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button size="sm" onClick={() => setActiveView('campaigns')} className="bg-emerald-600 hover:bg-emerald-700">
             <Megaphone className="w-4 h-4 mr-2" />
-            New Campaign
+            <span className="hidden sm:inline">New </span>Campaign
           </Button>
         </div>
       </div>

@@ -60,12 +60,12 @@ export function TasksView({ store, setShowTaskModal }: TasksViewProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tasks</h1>
           <p className="text-slate-500">Manage your follow-ups and to-dos</p>
         </div>
-        <Button onClick={() => setShowTaskModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button size="sm" onClick={() => setShowTaskModal(true)} className="bg-emerald-600 hover:bg-emerald-700 self-start sm:self-auto">
           <Plus className="w-4 h-4 mr-2" />
           Create Task
         </Button>
@@ -122,13 +122,13 @@ export function TasksView({ store, setShowTaskModal }: TasksViewProps) {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[160px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input placeholder="Search tasks..." className="pl-10" />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -139,7 +139,7 @@ export function TasksView({ store, setShowTaskModal }: TasksViewProps) {
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as TaskPriority | 'all')}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>

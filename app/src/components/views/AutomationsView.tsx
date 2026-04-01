@@ -45,12 +45,12 @@ export function AutomationsView({ store }: AutomationsViewProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Automations</h1>
           <p className="text-slate-500">Set up automated workflows and sequences</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-emerald-600 hover:bg-emerald-700 self-start sm:self-auto">
           <Plus className="w-4 h-4 mr-2" />
           Create Automation
         </Button>
@@ -113,7 +113,7 @@ export function AutomationsView({ store }: AutomationsViewProps) {
                   <p className="text-slate-500 text-sm mb-4">{automation.description}</p>
 
                   {/* Workflow Visual */}
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap overflow-x-auto">
                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
                       <Zap className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-900">
