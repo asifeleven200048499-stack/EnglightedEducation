@@ -52,6 +52,10 @@ export function InboxView({ store }: InboxViewProps) {
     ? conversations.find((c: any) => c.contactId === selectedContactId)
     : null;
 
+  useEffect(() => {
+    if (selectedContactId) store.loadMessages(selectedContactId);
+  }, [selectedContactId]);
+
   const handleSendMessage = () => {
     if (messageText.trim() && selectedContactId) {
       store.sendMessage(selectedContactId, messageText.trim());

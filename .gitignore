@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 .env.local
+venv/  
+__pycache__/  
+*.pyc  
+db.sqlite3  
+.env 
