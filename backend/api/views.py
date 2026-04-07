@@ -309,6 +309,16 @@ def messages_list(request, contact_id):
     return JsonResponse(serialize_message(message), status=201)
 
 
+# ─── UNIQUE SCHOOLS & COURSES ───────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def contact_options(request):
+    schools = list(Contact.objects.exclude(school='').values_list('school', flat=True).distinct().order_by('school'))
+    courses = list(Contact.objects.exclude(course='').values_list('course', flat=True).distinct().order_by('course'))
+    return JsonResponse({'schools': schools, 'courses': courses})
+
+
 # ─── CALLERS ─────────────────────────────────────────────────────────────────
 
 @csrf_exempt

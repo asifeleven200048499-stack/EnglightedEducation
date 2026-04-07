@@ -40,12 +40,10 @@ export function CallerManagementView() {
 
   const fetchContactOptions = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/contacts/`);
-      const contacts = await res.json();
-      const schools = [...new Set(contacts.map((c: any) => c.school).filter(Boolean))] as string[];
-      const courses = [...new Set(contacts.map((c: any) => c.course).filter(Boolean))] as string[];
-      setAvailableSchools(schools.sort());
-      setAvailableCourses(courses.sort());
+      const res = await fetch(`${BASE_URL}/contacts/options/`);
+      const data = await res.json();
+      setAvailableSchools(data.schools);
+      setAvailableCourses(data.courses);
     } catch {}
   };
 
