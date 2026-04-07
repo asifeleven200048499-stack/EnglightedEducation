@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Shield, ShieldOff } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Eye, EyeOff, Loader2, Shield, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { COURSES, SCHOOLS } from '@/lib/constants';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://enlightedleads.onrender.com/api';
 
@@ -28,6 +26,8 @@ export function CallerManagementView() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCaller, setEditingCaller] = useState<Caller | null>(null);
+  const [availableSchools, setAvailableSchools] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
 
   const fetchCallers = async () => {
     try {
@@ -38,7 +38,18 @@ export function CallerManagementView() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchCallers(); }, []);
+  const fetchContactOptions = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/contacts/`);
+      const contacts = await res.json();
+      const schools = [...new Set(contacts.map((c: any) => c.school).filter(Boolean))] as string[];
+      const courses = [...new Set(contacts.map((c: any) => c.course).filter(Boolean))] as string[];
+      setAvailableSchools(schools.sort());
+      setAvailableCourses(courses.sort());
+    } catch {}
+  };
+
+  useEffect(() => { fetchCallers(); fetchContactOptions(); }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this caller?')) return;
@@ -181,18 +192,22 @@ export function CallerManagementView() {
         onClose={() => { setShowModal(false); setEditingCaller(null); }}
         onSaved={handleSaved}
         nextName={`Caller ${callers.length + 1}`}
+        availableSchools={availableSchools}
+        availableCourses={availableCourses}
       />
     </div>
   );
 }
 
 
-function CallerModal({ open, caller, onClose, onSaved, nextName }: {
+function CallerModal({ open, caller, onClose, onSaved, nextName, availableSchools, availableCourses }: {
   open: boolean;
   caller: Caller | null;
   onClose: () => void;
   onSaved: (c: Caller) => void;
   nextName: string;
+  availableSchools: string[];
+  availableCourses: string[];
 }) {
   const [form, setForm] = useState({
     name: caller?.name || nextName,
@@ -286,7 +301,8 @@ function CallerModal({ open, caller, onClose, onSaved, nextName }: {
           <div>
             <Label>Assign Courses</Label>
             <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
-              {COURSES.map(c => (
+              {availableCourses.length === 0 && <p className="text-sm text-slate-400">No courses found in contacts yet.</p>}
+              {availableCourses.map(c => (
                 <button
                   key={c}
                   onClick={() => setForm({ ...form, assignedCourses: toggleItem(form.assignedCourses, c) })}
@@ -305,7 +321,8 @@ function CallerModal({ open, caller, onClose, onSaved, nextName }: {
           <div>
             <Label>Assign Schools</Label>
             <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
-              {SCHOOLS.map(s => (
+              {availableSchools.length === 0 && <p className="text-sm text-slate-400">No schools found in contacts yet.</p>}
+              {availableSchools.map(s => (
                 <button
                   key={s}
                   onClick={() => setForm({ ...form, assignedSchools: toggleItem(form.assignedSchools, s) })}
