@@ -332,7 +332,16 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">{formatRelativeTime(contact.lastContactedAt)}</TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.location.href = `tel:${contact.phone}`}
+                        className="text-emerald-600 hover:text-emerald-700"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </Button>
+                      <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="w-4 h-4" />
@@ -412,6 +421,15 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
                 </div>
 
                 <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-emerald-600 border-emerald-200"
+                    onClick={() => window.location.href = `tel:${contact.phone}`}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
