@@ -6,14 +6,13 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-enlighted-dev-key-change-in-production')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + ['*']
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
-    'rest_framework',
     'corsheaders',
     'api',
 ]
@@ -49,6 +48,7 @@ DATABASES = {
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
+USE_I18N = False
 USE_TZ = True
 
 STATIC_URL = '/static/'
@@ -57,10 +57,5 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = ['*']
 
-REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
-}
-
-MONGODB_URI = os.getenv('MONGODB_URI', '')
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

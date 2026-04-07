@@ -1,25 +1,112 @@
-import uuid
+import json
 from datetime import datetime, timezone
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-import json
-from .db import get_db
+from django.utils import timezone as tz
+from .models import Contact, Campaign, Automation, Task, Message
 
 
-def serialize(doc):
-    """Convert MongoDB doc to JSON-serializable dict."""
-    if doc is None:
-        return None
-    doc['id'] = str(doc.pop('_id', doc.get('id', '')))
-    for k, v in doc.items():
-        if isinstance(v, datetime):
-            doc[k] = v.isoformat()
-    return doc
+def serialize_contact(c):
+    return {
+        'id': str(c.id),
+        'name': c.name,
+        'phone': c.phone,
+        'email': c.email,
+        'course': c.course,
+        'school': c.school,
+        'source': c.source,
+        'status': c.status,
+        'tags': c.tags,
+        'leadScore': c.lead_score,
+        'intent': c.intent,
+        'messageCount': c.message_count,
+        'replyCount': c.reply_count,
+        'hasOptedIn': c.has_opted_in,
+        'optedInAt': c.opted_in_at.isoformat() if c.opted_in_at else None,
+        'notes': c.notes,
+        'customFields': c.custom_fields,
+        'createdAt': c.created_at.isoformat(),
+        'updatedAt': c.updated_at.isoformat(),
+        'lastContactedAt': c.last_contacted_at.isoformat() if c.last_contacted_at else None,
+        'lastReplyAt': c.last_reply_at.isoformat() if c.last_reply_at else None,
+    }
 
 
-def now():
-    return datetime.now(timezone.utc)
+def serialize_campaign(c):
+    return {
+        'id': str(c.id),
+        'name': c.name,
+        'description': c.description,
+        'messageTemplate': c.message_template,
+        'mediaUrl': c.media_url,
+        'targetTags': c.target_tags,
+        'targetSegments': c.target_segments,
+        'targetContactIds': c.target_contact_ids,
+        'status': c.status,
+        'scheduledAt': c.scheduled_at.isoformat() if c.scheduled_at else None,
+        'startedAt': c.started_at.isoformat() if c.started_at else None,
+        'completedAt': c.completed_at.isoformat() if c.completed_at else None,
+        'totalRecipients': c.total_recipients,
+        'sentCount': c.sent_count,
+        'deliveredCount': c.delivered_count,
+        'readCount': c.read_count,
+        'repliedCount': c.replied_count,
+        'failedCount': c.failed_count,
+        'abTestEnabled': c.ab_test_enabled,
+        'variantA': c.variant_a,
+        'variantB': c.variant_b,
+        'createdBy': c.created_by,
+        'createdAt': c.created_at.isoformat(),
+    }
+
+
+def serialize_automation(a):
+    return {
+        'id': str(a.id),
+        'name': a.name,
+        'description': a.description,
+        'isActive': a.is_active,
+        'trigger': a.trigger,
+        'actions': a.actions,
+        'createdAt': a.created_at.isoformat(),
+        'updatedAt': a.updated_at.isoformat(),
+    }
+
+
+def serialize_task(t):
+    return {
+        'id': str(t.id),
+        'title': t.title,
+        'description': t.description,
+        'contactId': t.contact_id,
+        'assignedTo': t.assigned_to,
+        'assignedBy': t.assigned_by,
+        'status': t.status,
+        'priority': t.priority,
+        'dueDate': t.due_date.isoformat(),
+        'completedAt': t.completed_at.isoformat() if t.completed_at else None,
+        'reminderAt': t.reminder_at.isoformat() if t.reminder_at else None,
+        'createdAt': t.created_at.isoformat(),
+        'updatedAt': t.updated_at.isoformat(),
+    }
+
+
+def serialize_message(m):
+    return {
+        'id': str(m.id),
+        'contactId': m.contact_id,
+        'content': m.content,
+        'direction': m.direction,
+        'status': m.status,
+        'sentAt': m.sent_at.isoformat(),
+        'deliveredAt': m.delivered_at.isoformat() if m.delivered_at else None,
+        'readAt': m.read_at.isoformat() if m.read_at else None,
+        'mediaUrl': m.media_url,
+        'mediaType': m.media_type,
+        'campaignId': m.campaign_id,
+        'isAutomated': m.is_automated,
+    }
 
 
 # ─── CONTACTS ────────────────────────────────────────────────────────────────
@@ -27,55 +114,58 @@ def now():
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def contacts_list(request):
-    db = get_db()
     if request.method == 'GET':
-        contacts = list(db.contacts.find())
-        return JsonResponse([serialize(c) for c in contacts], safe=False)
+        contacts = Contact.objects.all()
+        return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
 
     data = json.loads(request.body)
-    contact = {
-        '_id': str(uuid.uuid4()),
-        'name': data.get('name', 'Unknown'),
-        'phone': data.get('phone', ''),
-        'email': data.get('email', ''),
-        'course': data.get('course', ''),
-        'school': data.get('school', ''),
-        'source': data.get('source', 'Manual Entry'),
-        'status': data.get('status', 'new'),
-        'tags': data.get('tags', []),
-        'leadScore': data.get('leadScore', 50),
-        'intent': data.get('intent', 'neutral'),
-        'messageCount': 0,
-        'replyCount': 0,
-        'hasOptedIn': False,
-        'notes': [],
-        'customFields': {},
-        'createdAt': now(),
-        'updatedAt': now(),
-    }
-    db.contacts.insert_one(contact)
-    return JsonResponse(serialize(contact), status=201)
+    contact = Contact.objects.create(
+        name=data.get('name', 'Unknown'),
+        phone=data.get('phone', ''),
+        email=data.get('email', ''),
+        course=data.get('course', ''),
+        school=data.get('school', ''),
+        source=data.get('source', 'Manual Entry'),
+        status=data.get('status', 'new'),
+        tags=data.get('tags', []),
+        lead_score=data.get('leadScore', 50),
+        intent=data.get('intent', 'neutral'),
+        notes=data.get('notes', []),
+        custom_fields=data.get('customFields', {}),
+    )
+    return JsonResponse(serialize_contact(contact), status=201)
 
 
 @csrf_exempt
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def contact_detail(request, contact_id):
-    db = get_db()
+    try:
+        contact = Contact.objects.get(id=contact_id)
+    except Contact.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
     if request.method == 'GET':
-        contact = db.contacts.find_one({'_id': contact_id})
-        if not contact:
-            return JsonResponse({'error': 'Not found'}, status=404)
-        return JsonResponse(serialize(contact))
+        return JsonResponse(serialize_contact(contact))
 
     if request.method == 'PUT':
         data = json.loads(request.body)
-        data['updatedAt'] = now()
-        data.pop('id', None)
-        db.contacts.update_one({'_id': contact_id}, {'$set': data})
-        contact = db.contacts.find_one({'_id': contact_id})
-        return JsonResponse(serialize(contact))
+        field_map = {
+            'name': 'name', 'phone': 'phone', 'email': 'email',
+            'course': 'course', 'school': 'school', 'source': 'source',
+            'status': 'status', 'tags': 'tags', 'leadScore': 'lead_score',
+            'intent': 'intent', 'messageCount': 'message_count',
+            'replyCount': 'reply_count', 'hasOptedIn': 'has_opted_in',
+            'notes': 'notes', 'customFields': 'custom_fields',
+        }
+        for api_key, model_field in field_map.items():
+            if api_key in data:
+                setattr(contact, model_field, data[api_key])
+        if 'lastContactedAt' in data and data['lastContactedAt']:
+            contact.last_contacted_at = data['lastContactedAt']
+        contact.save()
+        return JsonResponse(serialize_contact(contact))
 
-    db.contacts.delete_one({'_id': contact_id})
+    contact.delete()
     return JsonResponse({'success': True})
 
 
@@ -84,94 +174,54 @@ def contact_detail(request, contact_id):
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def campaigns_list(request):
-    db = get_db()
     if request.method == 'GET':
-        return JsonResponse([serialize(c) for c in db.campaigns.find()], safe=False)
+        return JsonResponse([serialize_campaign(c) for c in Campaign.objects.all()], safe=False)
 
     data = json.loads(request.body)
-    campaign = {
-        '_id': str(uuid.uuid4()),
-        'name': data.get('name', 'Untitled Campaign'),
-        'description': data.get('description', ''),
-        'messageTemplate': data.get('messageTemplate', ''),
-        'targetTags': data.get('targetTags', []),
-        'targetSegments': data.get('targetSegments', []),
-        'status': data.get('status', 'draft'),
-        'totalRecipients': 0,
-        'sentCount': 0,
-        'deliveredCount': 0,
-        'readCount': 0,
-        'repliedCount': 0,
-        'failedCount': 0,
-        'abTestEnabled': data.get('abTestEnabled', False),
-        'createdBy': data.get('createdBy', 'Admin'),
-        'createdAt': now(),
-    }
-    db.campaigns.insert_one(campaign)
-    return JsonResponse(serialize(campaign), status=201)
+    campaign = Campaign.objects.create(
+        name=data.get('name', 'Untitled Campaign'),
+        description=data.get('description', ''),
+        message_template=data.get('messageTemplate', ''),
+        target_tags=data.get('targetTags', []),
+        target_segments=data.get('targetSegments', []),
+        status=data.get('status', 'draft'),
+        ab_test_enabled=data.get('abTestEnabled', False),
+        variant_a=data.get('variantA', ''),
+        variant_b=data.get('variantB', ''),
+        created_by=data.get('createdBy', 'Admin'),
+    )
+    return JsonResponse(serialize_campaign(campaign), status=201)
 
 
 @csrf_exempt
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def campaign_detail(request, campaign_id):
-    db = get_db()
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+    except Campaign.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
     if request.method == 'GET':
-        doc = db.campaigns.find_one({'_id': campaign_id})
-        return JsonResponse(serialize(doc)) if doc else JsonResponse({'error': 'Not found'}, status=404)
+        return JsonResponse(serialize_campaign(campaign))
 
     if request.method == 'PUT':
         data = json.loads(request.body)
-        data.pop('id', None)
-        db.campaigns.update_one({'_id': campaign_id}, {'$set': data})
-        return JsonResponse(serialize(db.campaigns.find_one({'_id': campaign_id})))
+        field_map = {
+            'name': 'name', 'description': 'description',
+            'messageTemplate': 'message_template', 'status': 'status',
+            'targetTags': 'target_tags', 'targetSegments': 'target_segments',
+            'totalRecipients': 'total_recipients', 'sentCount': 'sent_count',
+            'deliveredCount': 'delivered_count', 'readCount': 'read_count',
+            'repliedCount': 'replied_count', 'failedCount': 'failed_count',
+            'abTestEnabled': 'ab_test_enabled', 'variantA': 'variant_a', 'variantB': 'variant_b',
+        }
+        for api_key, model_field in field_map.items():
+            if api_key in data:
+                setattr(campaign, model_field, data[api_key])
+        campaign.save()
+        return JsonResponse(serialize_campaign(campaign))
 
-    db.campaigns.delete_one({'_id': campaign_id})
-    return JsonResponse({'success': True})
-
-
-# ─── TASKS ───────────────────────────────────────────────────────────────────
-
-@csrf_exempt
-@require_http_methods(['GET', 'POST'])
-def tasks_list(request):
-    db = get_db()
-    if request.method == 'GET':
-        return JsonResponse([serialize(t) for t in db.tasks.find()], safe=False)
-
-    data = json.loads(request.body)
-    task = {
-        '_id': str(uuid.uuid4()),
-        'title': data.get('title', 'Untitled Task'),
-        'description': data.get('description', ''),
-        'contactId': data.get('contactId', ''),
-        'assignedTo': data.get('assignedTo', 'Admin'),
-        'assignedBy': data.get('assignedBy', 'Admin'),
-        'status': data.get('status', 'pending'),
-        'priority': data.get('priority', 'medium'),
-        'dueDate': data.get('dueDate', ''),
-        'createdAt': now(),
-        'updatedAt': now(),
-    }
-    db.tasks.insert_one(task)
-    return JsonResponse(serialize(task), status=201)
-
-
-@csrf_exempt
-@require_http_methods(['GET', 'PUT', 'DELETE'])
-def task_detail(request, task_id):
-    db = get_db()
-    if request.method == 'GET':
-        doc = db.tasks.find_one({'_id': task_id})
-        return JsonResponse(serialize(doc)) if doc else JsonResponse({'error': 'Not found'}, status=404)
-
-    if request.method == 'PUT':
-        data = json.loads(request.body)
-        data['updatedAt'] = now()
-        data.pop('id', None)
-        db.tasks.update_one({'_id': task_id}, {'$set': data})
-        return JsonResponse(serialize(db.tasks.find_one({'_id': task_id})))
-
-    db.tasks.delete_one({'_id': task_id})
+    campaign.delete()
     return JsonResponse({'success': True})
 
 
@@ -180,41 +230,98 @@ def task_detail(request, task_id):
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def automations_list(request):
-    db = get_db()
     if request.method == 'GET':
-        return JsonResponse([serialize(a) for a in db.automations.find()], safe=False)
+        return JsonResponse([serialize_automation(a) for a in Automation.objects.all()], safe=False)
 
     data = json.loads(request.body)
-    automation = {
-        '_id': str(uuid.uuid4()),
-        'name': data.get('name', 'Untitled Automation'),
-        'description': data.get('description', ''),
-        'isActive': data.get('isActive', False),
-        'trigger': data.get('trigger', {'type': 'new-contact', 'config': {}}),
-        'actions': data.get('actions', []),
-        'createdAt': now(),
-        'updatedAt': now(),
-    }
-    db.automations.insert_one(automation)
-    return JsonResponse(serialize(automation), status=201)
+    automation = Automation.objects.create(
+        name=data.get('name', 'Untitled Automation'),
+        description=data.get('description', ''),
+        is_active=data.get('isActive', False),
+        trigger=data.get('trigger', {'type': 'new-contact', 'config': {}}),
+        actions=data.get('actions', []),
+    )
+    return JsonResponse(serialize_automation(automation), status=201)
 
 
 @csrf_exempt
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def automation_detail(request, automation_id):
-    db = get_db()
+    try:
+        automation = Automation.objects.get(id=automation_id)
+    except Automation.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
     if request.method == 'GET':
-        doc = db.automations.find_one({'_id': automation_id})
-        return JsonResponse(serialize(doc)) if doc else JsonResponse({'error': 'Not found'}, status=404)
+        return JsonResponse(serialize_automation(automation))
 
     if request.method == 'PUT':
         data = json.loads(request.body)
-        data['updatedAt'] = now()
-        data.pop('id', None)
-        db.automations.update_one({'_id': automation_id}, {'$set': data})
-        return JsonResponse(serialize(db.automations.find_one({'_id': automation_id})))
+        for api_key, model_field in [('name', 'name'), ('description', 'description'), ('isActive', 'is_active'), ('trigger', 'trigger'), ('actions', 'actions')]:
+            if api_key in data:
+                setattr(automation, model_field, data[api_key])
+        automation.save()
+        return JsonResponse(serialize_automation(automation))
 
-    db.automations.delete_one({'_id': automation_id})
+    automation.delete()
+    return JsonResponse({'success': True})
+
+
+# ─── TASKS ───────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['GET', 'POST'])
+def tasks_list(request):
+    if request.method == 'GET':
+        return JsonResponse([serialize_task(t) for t in Task.objects.all()], safe=False)
+
+    data = json.loads(request.body)
+    due_date_raw = data.get('dueDate', '')
+    try:
+        due_date = datetime.fromisoformat(due_date_raw.replace('Z', '+00:00')) if due_date_raw else tz.now()
+    except Exception:
+        due_date = tz.now()
+
+    task = Task.objects.create(
+        title=data.get('title', 'Untitled Task'),
+        description=data.get('description', ''),
+        contact_id=data.get('contactId', ''),
+        assigned_to=data.get('assignedTo', 'Admin'),
+        assigned_by=data.get('assignedBy', 'Admin'),
+        status=data.get('status', 'pending'),
+        priority=data.get('priority', 'medium'),
+        due_date=due_date,
+    )
+    return JsonResponse(serialize_task(task), status=201)
+
+
+@csrf_exempt
+@require_http_methods(['GET', 'PUT', 'DELETE'])
+def task_detail(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id)
+    except Task.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse(serialize_task(task))
+
+    if request.method == 'PUT':
+        data = json.loads(request.body)
+        for api_key, model_field in [('title', 'title'), ('description', 'description'), ('status', 'status'), ('priority', 'priority'), ('assignedTo', 'assigned_to')]:
+            if api_key in data:
+                setattr(task, model_field, data[api_key])
+        if 'dueDate' in data and data['dueDate']:
+            try:
+                task.due_date = datetime.fromisoformat(data['dueDate'].replace('Z', '+00:00'))
+            except Exception:
+                pass
+        if data.get('status') == 'completed' and not task.completed_at:
+            task.completed_at = tz.now()
+        task.save()
+        return JsonResponse(serialize_task(task))
+
+    task.delete()
     return JsonResponse({'success': True})
 
 
@@ -223,33 +330,31 @@ def automation_detail(request, automation_id):
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def messages_list(request, contact_id):
-    db = get_db()
     if request.method == 'GET':
-        msgs = list(db.messages.find({'contactId': contact_id}))
-        return JsonResponse([serialize(m) for m in msgs], safe=False)
+        msgs = Message.objects.filter(contact_id=contact_id)
+        return JsonResponse([serialize_message(m) for m in msgs], safe=False)
 
     data = json.loads(request.body)
-    message = {
-        '_id': str(uuid.uuid4()),
-        'contactId': contact_id,
-        'content': data.get('content', ''),
-        'direction': data.get('direction', 'outbound'),
-        'status': data.get('status', 'sent'),
-        'isAutomated': data.get('isAutomated', False),
-        'sentAt': now(),
-    }
-    db.messages.insert_one(message)
+    message = Message.objects.create(
+        contact_id=contact_id,
+        content=data.get('content', ''),
+        direction=data.get('direction', 'outbound'),
+        status=data.get('status', 'sent'),
+        is_automated=data.get('isAutomated', False),
+        campaign_id=data.get('campaignId', ''),
+    )
 
-    # Update contact message count
-    if message['direction'] == 'outbound':
-        db.contacts.update_one({'_id': contact_id}, {
-            '$inc': {'messageCount': 1},
-            '$set': {'lastContactedAt': now(), 'updatedAt': now()}
-        })
-    else:
-        db.contacts.update_one({'_id': contact_id}, {
-            '$inc': {'replyCount': 1},
-            '$set': {'lastReplyAt': now(), 'updatedAt': now()}
-        })
+    # Update contact stats
+    try:
+        contact = Contact.objects.get(id=contact_id)
+        if message.direction == 'outbound':
+            contact.message_count += 1
+            contact.last_contacted_at = tz.now()
+        else:
+            contact.reply_count += 1
+            contact.last_reply_at = tz.now()
+        contact.save()
+    except Contact.DoesNotExist:
+        pass
 
-    return JsonResponse(serialize(message), status=201)
+    return JsonResponse(serialize_message(message), status=201)
