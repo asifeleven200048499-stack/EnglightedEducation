@@ -41,4 +41,8 @@ export const api = {
   // Messages
   getMessages: (contactId: string) => request(`/messages/${contactId}/`),
   sendMessage: (contactId: string, data: any) => request(`/messages/${contactId}/`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // WhatsApp
+  whatsappSend: (contactId: string, message: string) => request('/whatsapp/send/', { method: 'POST', body: JSON.stringify({ contactId, message }) }),
+  whatsappBulkSend: (message: string, tag?: string, contactIds?: string[]) => request('/whatsapp/bulk-send/', { method: 'POST', body: JSON.stringify({ message, tag, contactIds }) }),
 };

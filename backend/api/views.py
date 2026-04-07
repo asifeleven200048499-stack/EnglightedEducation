@@ -1,10 +1,12 @@
 import json
 from datetime import datetime, timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as tz
+from django.conf import settings
 from .models import Contact, Campaign, Automation, Task, Message
+from .whatsapp import send_whatsapp_message, send_bulk_messages
 
 
 def serialize_contact(c):
@@ -363,3 +365,120 @@ def messages_list(request, contact_id):
         pass
 
     return JsonResponse(serialize_message(message), status=201)
+
+
+# ─── WHATSAPP WEBHOOK ────────────────────────────────────────────────────────
+
+@csrf_exempt
+def whatsapp_webhook(request):
+    if request.method == 'GET':
+        # Webhook verification from Meta
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+        if mode == 'subscribe' and token == settings.WHATSAPP_VERIFY_TOKEN:
+            return HttpResponse(challenge, content_type='text/plain')
+        return HttpResponse('Forbidden', status=403)
+
+    # Incoming message from WhatsApp
+    try:
+        data = json.loads(request.body)
+        entry = data.get('entry', [])
+        for e in entry:
+            for change in e.get('changes', []):
+                value = change.get('value', {})
+                messages = value.get('messages', [])
+                for msg in messages:
+                    phone = msg.get('from', '')
+                    text = msg.get('text', {}).get('body', '')
+                    wa_msg_id = msg.get('id', '')
+                    if not phone or not text:
+                        continue
+                    # Find or create contact
+                    contact, _ = Contact.objects.get_or_create(
+                        phone=phone,
+                        defaults={'name': phone, 'source': 'WhatsApp'}
+                    )
+                    # Save message
+                    Message.objects.create(
+                        contact_id=str(contact.id),
+                        content=text,
+                        direction='inbound',
+                        status='read',
+                        is_automated=False,
+                    )
+                    contact.reply_count += 1
+                    contact.last_reply_at = tz.now()
+                    contact.save()
+    except Exception as e:
+        pass
+
+    return HttpResponse('OK', status=200)
+
+
+# ─── WHATSAPP SEND ───────────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def whatsapp_send(request):
+    """Send a WhatsApp message to a single contact."""
+    data = json.loads(request.body)
+    contact_id = data.get('contactId')
+    message_text = data.get('message', '')
+
+    try:
+        contact = Contact.objects.get(id=contact_id)
+    except Contact.DoesNotExist:
+        return JsonResponse({'error': 'Contact not found'}, status=404)
+
+    result = send_whatsapp_message(contact.phone, message_text)
+
+    if result.get('messages'):
+        msg = Message.objects.create(
+            contact_id=contact_id,
+            content=message_text,
+            direction='outbound',
+            status='sent',
+            is_automated=False,
+        )
+        contact.message_count += 1
+        contact.last_contacted_at = tz.now()
+        contact.save()
+        return JsonResponse({'success': True, 'message': serialize_message(msg)})
+
+    return JsonResponse({'error': result}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def whatsapp_bulk_send(request):
+    """Send a WhatsApp message to multiple contacts by tag or all."""
+    data = json.loads(request.body)
+    message_text = data.get('message', '')
+    tag = data.get('tag')
+    contact_ids = data.get('contactIds', [])
+
+    if contact_ids:
+        contacts = Contact.objects.filter(id__in=contact_ids)
+    elif tag:
+        contacts = Contact.objects.filter(tags__contains=[tag])
+    else:
+        contacts = Contact.objects.all()
+
+    results = []
+    for contact in contacts:
+        result = send_whatsapp_message(contact.phone, message_text)
+        if result.get('messages'):
+            Message.objects.create(
+                contact_id=str(contact.id),
+                content=message_text,
+                direction='outbound',
+                status='sent',
+                is_automated=True,
+            )
+            contact.message_count += 1
+            contact.last_contacted_at = tz.now()
+            contact.save()
+        results.append({'phone': contact.phone, 'name': contact.name, 'success': bool(result.get('messages'))})
+
+    return JsonResponse({'results': results, 'total': len(results)})
