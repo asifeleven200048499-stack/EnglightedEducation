@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useStore } from '@/hooks/useStore';
-import { LoginView } from '@/components/views/LoginView';
+import { LoginView, type LoginUser } from '@/components/views/LoginView';
 import { DashboardView } from '@/components/views/DashboardView';
 import { ContactsView } from '@/components/views/ContactsView';
 import { InboxView } from '@/components/views/InboxView';
@@ -27,11 +27,13 @@ import { CampaignsView, CampaignModal } from '@/components/views/CampaignsView';
 import { AutomationsView } from '@/components/views/AutomationsView';
 import { TasksView, TaskModal } from '@/components/views/TasksView';
 import { AnalyticsView } from '@/components/views/AnalyticsView';
+import { CallerManagementView } from '@/components/views/CallerManagementView';
+import { CallerDashboard } from '@/components/views/CallerDashboard';
 import { getInitials } from '@/lib/utils';
 import type { Contact } from '@/types';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<LoginUser | null>(null);
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -43,8 +45,12 @@ function App() {
   const store = useStore();
   const stats = store.getDashboardStats();
 
-  if (!isLoggedIn) {
-    return <LoginView onLogin={() => setIsLoggedIn(true)} />;
+  if (!currentUser) {
+    return <LoginView onLogin={(user) => setCurrentUser(user)} />;
+  }
+
+  if (currentUser.type === 'caller') {
+    return <CallerDashboard user={currentUser} onLogout={() => setCurrentUser(null)} />;
   }
 
   const navItems = [
@@ -55,6 +61,7 @@ function App() {
     { id: 'automations', label: 'Automations', icon: Zap },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'callers', label: 'Callers', icon: Users },
   ];
 
   const renderView = () => {
@@ -73,6 +80,8 @@ function App() {
         return <TasksView store={store} setShowTaskModal={setShowTaskModal} />;
       case 'analytics':
         return <AnalyticsView stats={stats} store={store} />;
+      case 'callers':
+        return <CallerManagementView />;
       default:
         return <DashboardView stats={stats} store={store} setActiveView={setActiveView} />;
     }
@@ -171,13 +180,13 @@ function App() {
           <div className="flex items-center">
             <Avatar className="w-8 h-8">
               <AvatarFallback className="bg-emerald-600 text-white text-sm">
-                {getInitials(store.currentUser.name)}
+                {getInitials(currentUser.name)}
               </AvatarFallback>
             </Avatar>
             {sidebarOpen && (
               <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">{store.currentUser.name}</p>
-                <p className="text-xs text-slate-500 capitalize">{store.currentUser.role}</p>
+                <p className="text-sm font-medium text-slate-900 truncate">{currentUser.name}</p>
+                <button onClick={() => setCurrentUser(null)} className="text-xs text-red-500 hover:text-red-700">Logout</button>
               </div>
             )}
           </div>

@@ -5,9 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
+const ADMINS = [
+  { username: 'Faiz123', password: '@2qCnDAJMM', name: 'Faiz', role: 'admin' },
+  { username: 'RihabCK', password: 'Toyotacamry4647', name: 'Rihab CK', role: 'admin' },
+];
+
+export type LoginUser =
+  | { type: 'admin'; name: string; role: string }
+  | { type: 'caller'; id: string; name: string; username: string; assignedSchools: string[]; assignedCourses: string[] };
+
 interface LoginViewProps {
-  onLogin: () => void;
+  onLogin: (user: LoginUser) => void;
 }
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://enlightedleads.onrender.com/api';
 
 export function LoginView({ onLogin }: LoginViewProps) {
   const [username, setUsername] = useState('');
@@ -16,19 +27,43 @@ export function LoginView({ onLogin }: LoginViewProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      if (username === 'Faiz123' && password === '@2qCnDAJMM') {
-        onLogin();
+    // Check admin credentials first
+    const admin = ADMINS.find(a => a.username === username && a.password === password);
+    if (admin) {
+      onLogin({ type: 'admin', name: admin.name, role: admin.role });
+      setLoading(false);
+      return;
+    }
+
+    // Try caller login via API
+    try {
+      const res = await fetch(`${BASE_URL}/callers/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLogin({
+          type: 'caller',
+          id: data.caller.id,
+          name: data.caller.name,
+          username: data.caller.username,
+          assignedSchools: data.caller.assignedSchools,
+          assignedCourses: data.caller.assignedCourses,
+        });
       } else {
         setError('Invalid username or password.');
       }
-      setLoading(false);
-    }, 500);
+    } catch {
+      setError('Connection error. Please try again.');
+    }
+    setLoading(false);
   };
 
   return (
