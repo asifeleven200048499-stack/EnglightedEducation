@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const ADMINS = [
-  { username: 'Faiz123', password: '@2qCnDAJMM', name: 'Faiz', role: 'admin' },
+  { username: 'AlFaizPJ', password: 'Faizxuv', name: 'Faiz', role: 'admin' },
   { username: 'RihabCK', password: 'Toyotacamry4647', name: 'Rihab CK', role: 'admin' },
 ];
 
