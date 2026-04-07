@@ -539,24 +539,43 @@ function ImportContactModal({ open, onClose, store }: { open: boolean; onClose: 
     return contacts;
   };
 
-  const handleSaveExtracted = () => {
-    store.addContacts(
-      extractedContacts.map(ec => ({
-        name: ec.name,
-        phone: ec.phone,
-        leadScore: 50
-      })),
-      metadata
-    );
-    onClose();
-    setExtractedContacts([]);
-    setPreviewImage(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const handleSaveExtracted = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      await store.addContacts(
+        extractedContacts.map(ec => ({
+          name: ec.name,
+          phone: ec.phone,
+          leadScore: 50
+        })),
+        metadata
+      );
+      onClose();
+      setExtractedContacts([]);
+      setPreviewImage(null);
+    } catch (e) {
+      setSaveError('Failed to save contacts. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleCSVImport = () => {
-    store.importContactsFromCSV(csvText, metadata);
-    onClose();
-    setCsvText('');
+  const handleCSVImport = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      await store.importContactsFromCSV(csvText, metadata);
+      onClose();
+      setCsvText('');
+    } catch (e) {
+      setSaveError('Failed to import CSV. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -662,11 +681,12 @@ function ImportContactModal({ open, onClose, store }: { open: boolean; onClose: 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Extracted Contacts ({extractedContacts.length})</h4>
-                  <Button onClick={handleSaveExtracted} className="bg-emerald-600">
-                    <Check className="w-4 h-4 mr-2" />
-                    Save All
+                  <Button onClick={handleSaveExtracted} className="bg-emerald-600" disabled={saving}>
+                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                    {saving ? 'Saving...' : 'Save All'}
                   </Button>
                 </div>
+                {saveError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{saveError}</p>}
                 <div className="grid grid-cols-2 gap-4">
                   {previewImage && (
                     <img src={previewImage} alt="Preview" className="rounded-lg border max-h-64 object-contain" />
@@ -731,10 +751,11 @@ function ImportContactModal({ open, onClose, store }: { open: boolean; onClose: 
               onChange={(e) => setCsvText(e.target.value)}
               className="min-h-[200px] font-mono text-sm"
             />
-            <Button onClick={handleCSVImport} className="w-full bg-emerald-600">
-              <Upload className="w-4 h-4 mr-2" />
-              Import CSV
+            <Button onClick={handleCSVImport} className="w-full bg-emerald-600" disabled={saving || !csvText.trim()}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              {saving ? 'Importing...' : 'Import CSV'}
             </Button>
+            {saveError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{saveError}</p>}
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -756,20 +777,26 @@ function AddContactModal({ open, onClose, store }: { open: boolean; onClose: () 
     status: 'new' as LeadStatus,
     tags: [] as ContactTag[]
   });
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
-    store.addContact({
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email,
-      course: formData.course,
-      school: formData.school,
-      source: formData.source,
-      status: formData.status,
-      tags: formData.tags,
-      leadScore: 50
-    });
-    onClose();
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      await store.addContact({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        course: formData.course,
+        school: formData.school,
+        source: formData.source,
+        status: formData.status,
+        tags: formData.tags,
+        leadScore: 50
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -864,8 +891,9 @@ function AddContactModal({ open, onClose, store }: { open: boolean; onClose: () 
               ))}
             </div>
           </div>
-          <Button onClick={handleSubmit} className="w-full bg-emerald-600">
-            Add Contact
+          <Button onClick={handleSubmit} disabled={saving || !formData.name || !formData.phone} className="w-full bg-emerald-600">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {saving ? 'Saving...' : 'Add Contact'}
           </Button>
         </div>
       </DialogContent>
