@@ -546,7 +546,7 @@ function ImportContactModal({ open, onClose, store }: { open: boolean; onClose: 
     setSaving(true);
     setSaveError('');
     try {
-      await store.addContacts(
+      const result = await store.addContacts(
         extractedContacts.map(ec => ({
           name: ec.name,
           phone: ec.phone,
@@ -554,9 +554,13 @@ function ImportContactModal({ open, onClose, store }: { open: boolean; onClose: 
         })),
         metadata
       );
+      const msg = result.duplicates > 0
+        ? `Saved ${result.created} contacts. ${result.duplicates} duplicate(s) skipped.`
+        : `Saved ${result.created} contacts successfully.`;
       onClose();
       setExtractedContacts([]);
       setPreviewImage(null);
+      alert(msg);
     } catch (e) {
       setSaveError('Failed to save contacts. Please try again.');
     } finally {

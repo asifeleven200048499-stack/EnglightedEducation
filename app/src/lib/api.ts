@@ -5,6 +5,10 @@ async function request(path: string, options?: RequestInit) {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
+  if (res.status === 409) {
+    const data = await res.json();
+    throw Object.assign(new Error(data.message || 'Duplicate'), { code: 'duplicate', existing: data.existing });
+  }
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }

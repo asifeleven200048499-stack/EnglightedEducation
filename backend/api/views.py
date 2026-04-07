@@ -119,9 +119,14 @@ def contacts_list(request):
         return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
 
     data = json.loads(request.body)
+    phone = data.get('phone', '').strip()
+    if phone and Contact.objects.filter(phone=phone).exists():
+        existing = Contact.objects.get(phone=phone)
+        return JsonResponse({'error': 'duplicate', 'message': f'A contact with this number already exists.', 'existing': serialize_contact(existing)}, status=409)
+
     contact = Contact.objects.create(
         name=data.get('name', 'Unknown'),
-        phone=data.get('phone', ''),
+        phone=phone,
         email=data.get('email', ''),
         course=data.get('course', ''),
         school=data.get('school', ''),

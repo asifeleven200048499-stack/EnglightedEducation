@@ -88,17 +88,27 @@ export function useStore() {
   }, []);
 
   const addContacts = useCallback(async (contactsData: Partial<Contact>[], metadata?: PreUploadMetadata) => {
-    const created = await Promise.all(contactsData.map(data => api.createContact({
-      ...data,
-      course: metadata?.course || data.course,
-      school: metadata?.school || data.school,
-      source: metadata?.source || data.source || 'Bulk Import',
-      status: metadata?.defaultStatus || 'new',
-      tags: metadata?.tags || data.tags || [],
-      leadScore: data.leadScore || 50,
-    })));
-    setContacts(prev => [...created.map(parseContact), ...prev]);
-    return created;
+    const created: Contact[] = [];
+    let duplicates = 0;
+    await Promise.all(contactsData.map(async data => {
+      try {
+        const c = await api.createContact({
+          ...data,
+          course: metadata?.course || data.course,
+          school: metadata?.school || data.school,
+          source: metadata?.source || data.source || 'Bulk Import',
+          status: metadata?.defaultStatus || 'new',
+          tags: metadata?.tags || data.tags || [],
+          leadScore: data.leadScore || 50,
+        });
+        created.push(parseContact(c));
+      } catch (e: any) {
+        if (e.code === 'duplicate') duplicates++;
+        else throw e;
+      }
+    }));
+    if (created.length > 0) setContacts(prev => [...created, ...prev]);
+    return { created: created.length, duplicates };
   }, []);
 
   const updateContact = useCallback(async (id: string, updates: Partial<Contact>) => {
