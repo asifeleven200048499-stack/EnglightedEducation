@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 
-GRAPH_URL = 'https://graph.facebook.com/v22.0'
+GRAPH_URL = 'https://graph.facebook.com/v25.0'
 
 
 def send_whatsapp_message(to: str, message: str) -> dict:
