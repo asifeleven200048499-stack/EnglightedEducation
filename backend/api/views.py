@@ -479,7 +479,25 @@ def whatsapp_send(request):
     except Contact.DoesNotExist:
         return JsonResponse({'error': 'Contact not found'}, status=404)
 
-    result = _send_wa_message(contact.phone, message_text)
+    phone = contact.phone
+    if not phone.startswith('+'):
+        phone = '+' + phone
+
+    url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': phone,
+        'type': 'text',
+        'text': {'body': message_text},
+    }
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f'Sending WA message to {phone}, token starts: {settings.WHATSAPP_TOKEN[:20]}')
+    
+    res = requests.post(url, json=payload, headers=_wa_headers())
+    result = res.json()
+    logger.error(f'WA API response: {result}')
+
     if result.get('messages'):
         msg = Message.objects.create(
             contact_id=contact_id, content=message_text,
