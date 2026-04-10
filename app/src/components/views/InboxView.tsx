@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
+import { api } from '@/lib/api';
 import type { Message } from '@/types';
 
 interface InboxViewProps {
@@ -56,10 +57,16 @@ export function InboxView({ store }: InboxViewProps) {
     if (selectedContactId) store.loadMessages(selectedContactId);
   }, [selectedContactId]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (messageText.trim() && selectedContactId) {
-      store.sendMessage(selectedContactId, messageText.trim());
+      const text = messageText.trim();
       setMessageText('');
+      try {
+        await api.whatsappSend(selectedContactId, text);
+        await store.loadMessages(selectedContactId);
+      } catch {
+        store.sendMessage(selectedContactId, text);
+      }
     }
   };
 
