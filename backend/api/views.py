@@ -1,9 +1,11 @@
 import json
 from datetime import datetime
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as tz
+from django.conf import settings
+import requests
 from .models import Contact, Campaign, Automation, Task, Message, Caller
 
 
@@ -398,3 +400,121 @@ def caller_contacts(request, caller_id):
         contacts = contacts.filter(course__in=caller.assigned_courses)
 
     return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
+
+
+# ─── WHATSAPP ────────────────────────────────────────────────────────────────
+
+GRAPH_URL = 'https://graph.facebook.com/v25.0'
+
+
+def _wa_headers():
+    return {
+        'Authorization': f'Bearer {settings.WHATSAPP_TOKEN}',
+        'Content-Type': 'application/json',
+    }
+
+
+def _send_wa_message(to, text):
+    url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': to,
+        'type': 'text',
+        'text': {'body': text},
+    }
+    res = requests.post(url, json=payload, headers=_wa_headers())
+    return res.json()
+
+
+@csrf_exempt
+def whatsapp_webhook(request):
+    if request.method == 'GET':
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+        if mode == 'subscribe' and token == settings.WHATSAPP_VERIFY_TOKEN:
+            return HttpResponse(challenge, content_type='text/plain')
+        return HttpResponse('Forbidden', status=403)
+
+    try:
+        data = json.loads(request.body)
+        for entry in data.get('entry', []):
+            for change in entry.get('changes', []):
+                for msg in change.get('value', {}).get('messages', []):
+                    phone = msg.get('from', '')
+                    text = msg.get('text', {}).get('body', '')
+                    if not phone or not text:
+                        continue
+                    contact, _ = Contact.objects.get_or_create(
+                        phone=phone,
+                        defaults={'name': phone, 'source': 'WhatsApp'}
+                    )
+                    Message.objects.create(
+                        contact_id=str(contact.id),
+                        content=text,
+                        direction='inbound',
+                        status='read',
+                        is_automated=False,
+                    )
+                    contact.reply_count += 1
+                    contact.last_reply_at = tz.now()
+                    contact.save()
+    except Exception:
+        pass
+
+    return HttpResponse('OK', status=200)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def whatsapp_send(request):
+    data = json.loads(request.body)
+    contact_id = data.get('contactId')
+    message_text = data.get('message', '')
+    try:
+        contact = Contact.objects.get(id=contact_id)
+    except Contact.DoesNotExist:
+        return JsonResponse({'error': 'Contact not found'}, status=404)
+
+    result = _send_wa_message(contact.phone, message_text)
+    if result.get('messages'):
+        msg = Message.objects.create(
+            contact_id=contact_id, content=message_text,
+            direction='outbound', status='sent', is_automated=False,
+        )
+        contact.message_count += 1
+        contact.last_contacted_at = tz.now()
+        contact.save()
+        return JsonResponse({'success': True, 'message': serialize_message(msg)})
+    return JsonResponse({'error': result}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def whatsapp_bulk_send(request):
+    data = json.loads(request.body)
+    message_text = data.get('message', '')
+    tag = data.get('tag')
+    contact_ids = data.get('contactIds', [])
+
+    if contact_ids:
+        contacts = Contact.objects.filter(id__in=contact_ids)
+    elif tag:
+        contacts = Contact.objects.filter(tags__contains=[tag])
+    else:
+        contacts = Contact.objects.all()
+
+    results = []
+    for contact in contacts:
+        result = _send_wa_message(contact.phone, message_text)
+        if result.get('messages'):
+            Message.objects.create(
+                contact_id=str(contact.id), content=message_text,
+                direction='outbound', status='sent', is_automated=True,
+            )
+            contact.message_count += 1
+            contact.last_contacted_at = tz.now()
+            contact.save()
+        results.append({'phone': contact.phone, 'name': contact.name, 'success': bool(result.get('messages'))})
+
+    return JsonResponse({'results': results, 'total': len(results)})
