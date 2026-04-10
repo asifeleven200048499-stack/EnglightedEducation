@@ -66,6 +66,16 @@ export function InboxView({ store }: InboxViewProps) {
     if (selectedContactId) store.loadMessages(selectedContactId);
   }, [selectedContactId]);
 
+  // Poll for new messages every 3 seconds
+  useEffect(() => {
+    if (!selectedContactId) return;
+    const interval = setInterval(async () => {
+      const msgs = await api.getMessages(selectedContactId);
+      store.setMessagesForContact(selectedContactId, msgs);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [selectedContactId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedConversation?.messages?.length]);

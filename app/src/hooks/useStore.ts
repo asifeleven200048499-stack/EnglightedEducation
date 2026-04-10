@@ -66,10 +66,22 @@ export function useStore() {
 
   // Load messages for a contact when needed
   const loadMessages = useCallback(async (contactId: string) => {
-    if (messages[contactId]) return;
     const msgs = await api.getMessages(contactId);
     setMessages(prev => ({ ...prev, [contactId]: msgs.map(parseMessage) }));
-  }, [messages]);
+  }, []);
+
+  const setMessagesForContact = useCallback((contactId: string, msgs: any[]) => {
+    setMessages(prev => ({ ...prev, [contactId]: msgs.map(parseMessage) }));
+  }, []);
+
+  // Poll contacts every 5 seconds to catch new incoming conversations
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const c = await api.getContacts();
+      setContacts(c.map(parseContact));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ── Contact Actions ──────────────────────────────────────────────────────
 
@@ -363,7 +375,7 @@ export function useStore() {
     createAutomation, updateAutomation, deleteAutomation, toggleAutomation,
     createTask, updateTask, completeTask, deleteTask,
     sendMessage, receiveMessage, getConversation, getAllConversations,
-    loadMessages,
+    loadMessages, setMessagesForContact,
     exportContactsToCSV, importContactsFromCSV,
     getDashboardStats, analyzeIntent, calculateLeadScore,
   };
