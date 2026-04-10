@@ -415,6 +415,9 @@ def _wa_headers():
 
 
 def _send_wa_message(to, text):
+    # Ensure number has + prefix
+    if not to.startswith('+'):
+        to = '+' + to
     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
     payload = {
         'messaging_product': 'whatsapp',
