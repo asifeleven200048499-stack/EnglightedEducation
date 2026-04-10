@@ -409,7 +409,7 @@ GRAPH_URL = 'https://graph.facebook.com/v25.0'
 
 def _wa_headers():
     return {
-        'Authorization': f'Bearer {settings.WHATSAPP_TOKEN}',
+        'Authorization': f'Bearer {settings.WHATSAPP_TOKEN.strip()}',
         'Content-Type': 'application/json',
     }
 
