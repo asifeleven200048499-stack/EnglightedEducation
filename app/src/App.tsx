@@ -49,6 +49,19 @@ function App() {
     return <LoginView onLogin={(user) => setCurrentUser(user)} />;
   }
 
+  if (store.loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
+          <MessageSquare className="w-7 h-7 text-white" />
+        </div>
+        <p className="text-white text-lg font-semibold">Enlighted</p>
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 text-sm">Loading your data...</p>
+      </div>
+    );
+  }
+
   if (currentUser.type === 'caller') {
     return <CallerDashboard user={currentUser} onLogout={() => setCurrentUser(null)} />;
   }
