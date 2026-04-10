@@ -257,7 +257,7 @@ export function useStore() {
 
   const getAllConversations = useCallback((): Conversation[] => {
     return contacts
-      .filter(c => messages[c.id]?.length > 0)
+      .filter(c => c.replyCount > 0 || c.messageCount > 0 || messages[c.id]?.length > 0)
       .map(c => ({
         contactId: c.id,
         contact: c,
@@ -265,7 +265,11 @@ export function useStore() {
         unreadCount: (messages[c.id] || []).filter(m => m.direction === 'inbound' && m.status !== 'read').length,
         lastMessage: messages[c.id]?.[messages[c.id].length - 1],
       }))
-      .sort((a, b) => (b.lastMessage?.sentAt.getTime() || 0) - (a.lastMessage?.sentAt.getTime() || 0));
+      .sort((a, b) => {
+        const aTime = a.lastMessage?.sentAt.getTime() || a.contact.lastReplyAt?.getTime() || a.contact.lastContactedAt?.getTime() || 0;
+        const bTime = b.lastMessage?.sentAt.getTime() || b.contact.lastReplyAt?.getTime() || b.contact.lastContactedAt?.getTime() || 0;
+        return bTime - aTime;
+      });
   }, [contacts, messages]);
 
   // ── Export/Import ────────────────────────────────────────────────────────
