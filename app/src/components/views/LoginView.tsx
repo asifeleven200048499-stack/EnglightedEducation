@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 const ADMINS = [
   { username: 'AlFaizPJ', password: 'Faizxuv', name: 'Faiz', role: 'admin' },
   { username: 'RihabCK', password: 'Toyotacamry4647', name: 'Rihab CK', role: 'admin' },
+  { username: 'Mohamed Shifal', password: 'Tharammal100', name: 'Mohamed Shifal', role: 'admin' },
 ];
 
 export type LoginUser =
