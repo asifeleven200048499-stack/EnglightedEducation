@@ -18,5 +18,4 @@ urlpatterns = [
     path('callers/<str:caller_id>/contacts/', views.caller_contacts),
     path('whatsapp/webhook/', views.whatsapp_webhook),
     path('whatsapp/send/', views.whatsapp_send),
-    path('whatsapp/bulk-send/', views.whatsapp_bulk_send),
 ]
