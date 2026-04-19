@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, Send, Paperclip, Smile, MoreVertical, CheckCheck, Check,
   Phone, Video, ArrowLeft, MessageSquare, Reply, Forward, Trash2,
-  Star, Copy, X, CornerUpLeft
+  Star, Copy, X, CornerUpLeft, FileText
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials, getAvatarColor } from '@/lib/utils';
@@ -51,6 +51,21 @@ export function InboxView({ store }: InboxViewProps) {
   const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [sendingTemplate, setSendingTemplate] = useState(false);
+
+  const handleSendTemplate = async () => {
+    if (!selectedContactId || sendingTemplate) return;
+    setSendingTemplate(true);
+    try {
+      await api.whatsappSendTemplate(selectedContactId);
+      await store.loadMessages(selectedContactId);
+    } catch {
+      alert('Failed to send template');
+    } finally {
+      setSendingTemplate(false);
+    }
+  };
 
   const conversations = store.getAllConversations();
   const filteredConversations = conversations.filter((conv: any) =>
@@ -349,6 +364,9 @@ export function InboxView({ store }: InboxViewProps) {
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
               />
             </div>
+            <button onClick={handleSendTemplate} disabled={sendingTemplate} title="Send Admission Enquiry Template" className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] disabled:opacity-50">
+              <FileText className="w-5 h-5" />
+            </button>
             <button onClick={handleSendMessage} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#00a884' }}>
               <Send className="w-5 h-5 text-white" />
             </button>

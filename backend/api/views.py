@@ -429,6 +429,94 @@ def _send_wa_message(to, text):
     return res.json()
 
 
+def _send_wa_interactive_buttons(to, body_text, buttons):
+    # Ensure number has + prefix
+    if not to.startswith('+'):
+        to = '+' + to
+    url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': to,
+        'type': 'interactive',
+        'interactive': {
+            'type': 'button',
+            'body': {'text': body_text},
+            'action': {'buttons': buttons}
+        }
+    }
+    res = requests.post(url, json=payload, headers=_wa_headers())
+    return res.json()
+
+
+COLLEGE_LISTS = {
+    'Bangalore': '''🎓 *BANGALORE COLLEGE LIST*
+
+1️⃣ SRI VINAYA GROUP | FLORENCE GROUP
+2️⃣ SRI SIDDHARTHA COLLEGE | JUPITER GROUP
+3️⃣ HILLSIDE GROUP | BGS AND SJB GROUP
+4️⃣ EAST POINT GROUP | PADMASHREE GROUP
+5️⃣ ABHAYA COLLEGE | NALAPAD NURSING
+6️⃣ PES UNIVERSITY | S-VYASA COLLEGE
+7️⃣ KOSHYS GROUP | MATHRUSHREE COLLEGE
+8️⃣ BRINDAVAN GROUP | CHRIST UNIVERSITY
+9️⃣ JAIN UNIVERSITY | REVA UNIVERSITY
+🔟 PRESIDENCY UNIVERSITY | GARDEN CITY UNIVERSITY
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details''',
+    'Manglore': '''🎓 *MANGALORE COLLEGE LIST*
+
+1️⃣ SRINIVAS UNIVERSITY
+2️⃣ YENEPOYA UNIVERSITY
+3️⃣ INDIANA HOSPITAL AND HEART INSTITUTE
+4️⃣ AJ COLLEGE OF ENGINEERING
+5️⃣ TEJASWINI GROUP OF INSTITUTION
+6️⃣ UNITY ACADEMY OF EDUCATION
+7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
+8️⃣ ALIYAH COLLEGE OF NURSING
+9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
+🔟 SHREE DEVI EDUCATION TRUST
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details''',
+    'Mangalore': '''🎓 *MANGALORE COLLEGE LIST*
+
+1️⃣ SRINIVAS UNIVERSITY
+2️⃣ YENEPOYA UNIVERSITY
+3️⃣ INDIANA HOSPITAL AND HEART INSTITUTE
+4️⃣ AJ COLLEGE OF ENGINEERING
+5️⃣ TEJASWINI GROUP OF INSTITUTION
+6️⃣ UNITY ACADEMY OF EDUCATION
+7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
+8️⃣ ALIYAH COLLEGE OF NURSING
+9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
+🔟 SHREE DEVI EDUCATION TRUST
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details''',
+    'Kerala': '''🎓 *KERALA COLLEGE LIST*
+
+1️⃣ KMM (KOCHI)
+
+2️⃣ AL AZHAR (IDUKKI)
+
+3️⃣ METS (CALICUT)
+
+4️⃣ MES (KOCHI)
+
+5️⃣ ELIMS (THRISSUR)
+
+6️⃣ JAIN (KOCHI)
+
+7️⃣ INDIRA GANDHI
+
+8️⃣ YMBC (KOCHI)
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details''',
+}
+
+
 @csrf_exempt
 def whatsapp_webhook(request):
     if request.method == 'GET':
@@ -445,6 +533,42 @@ def whatsapp_webhook(request):
             for change in entry.get('changes', []):
                 for msg in change.get('value', {}).get('messages', []):
                     phone = msg.get('from', '')
+                    
+                    # Handle interactive messages (buttons and lists)
+                    if msg.get('type') == 'interactive':
+                        interactive = msg.get('interactive', {})
+                        
+                        # Handle button clicks
+                        button_id = interactive.get('button_reply', {}).get('id', '')
+                        
+                        # Handle list selections
+                        list_id = interactive.get('list_reply', {}).get('id', '')
+                        
+                        # Get the selected option (button or list)
+                        selected_id = button_id or list_id
+                        
+                        if selected_id in ['bangalore', 'mangalore', 'kerala']:
+                            city_name = selected_id.title()
+                            college_reply = COLLEGE_LISTS.get(city_name)
+                            if college_reply:
+                                _send_wa_message(phone, college_reply)
+                                contact, _ = Contact.objects.get_or_create(
+                                    phone=phone,
+                                    defaults={'name': phone, 'source': 'WhatsApp'}
+                                )
+                                Message.objects.create(
+                                    contact_id=str(contact.id),
+                                    content=college_reply,
+                                    direction='outbound',
+                                    status='sent',
+                                    is_automated=True,
+                                )
+                                contact.message_count += 1
+                                contact.last_contacted_at = tz.now()
+                                contact.save()
+                            continue
+                    
+                    # Handle text messages
                     text = msg.get('text', {}).get('body', '')
                     if not phone or not text:
                         continue
@@ -462,6 +586,20 @@ def whatsapp_webhook(request):
                     contact.reply_count += 1
                     contact.last_reply_at = tz.now()
                     contact.save()
+                    # Auto-reply with college list if button tapped
+                    college_reply = COLLEGE_LISTS.get(text.strip())
+                    if college_reply:
+                        _send_wa_message(phone, college_reply)
+                        Message.objects.create(
+                            contact_id=str(contact.id),
+                            content=college_reply,
+                            direction='outbound',
+                            status='sent',
+                            is_automated=True,
+                        )
+                        contact.message_count += 1
+                        contact.last_contacted_at = tz.now()
+                        contact.save()
     except Exception:
         pass
 
@@ -501,6 +639,54 @@ def whatsapp_send(request):
     if result.get('messages'):
         msg = Message.objects.create(
             contact_id=contact_id, content=message_text,
+            direction='outbound', status='sent', is_automated=False,
+        )
+        contact.message_count += 1
+        contact.last_contacted_at = tz.now()
+        contact.save()
+        return JsonResponse({'success': True, 'message': serialize_message(msg)})
+    return JsonResponse({'error': result}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(['GET'])
+def whatsapp_templates(request):
+    url = f'{GRAPH_URL}/{settings.WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates'
+    params = {'fields': 'name,status,category,language,components', 'limit': 100}
+    res = requests.get(url, headers=_wa_headers(), params=params)
+    return JsonResponse(res.json())
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def whatsapp_send_template(request):
+    data = json.loads(request.body)
+    contact_id = data.get('contactId')
+    template_name = data.get('templateName', 'enlighted_admission_enquiry')
+    lang = data.get('lang', 'en')
+    try:
+        contact = Contact.objects.get(id=contact_id)
+    except Contact.DoesNotExist:
+        return JsonResponse({'error': 'Contact not found'}, status=404)
+
+    phone = contact.phone
+    if not phone.startswith('+'):
+        phone = '+' + phone
+
+    url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': phone,
+        'type': 'template',
+        'template': {'name': template_name, 'language': {'code': lang}},
+    }
+    res = requests.post(url, json=payload, headers=_wa_headers())
+    result = res.json()
+
+    if result.get('messages'):
+        msg = Message.objects.create(
+            contact_id=contact_id,
+            content=f'[Template: {template_name}]',
             direction='outbound', status='sent', is_automated=False,
         )
         contact.message_count += 1

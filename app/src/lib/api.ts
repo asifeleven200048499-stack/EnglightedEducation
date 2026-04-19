@@ -44,5 +44,6 @@ export const api = {
 
   // WhatsApp
   whatsappSend: (contactId: string, message: string) => request('/whatsapp/send/', { method: 'POST', body: JSON.stringify({ contactId, message }) }),
+  whatsappSendTemplate: (contactId: string) => request('/whatsapp/send-template/', { method: 'POST', body: JSON.stringify({ contactId, templateName: 'enlighted_admission_enquiry', lang: 'en' }) }),
   whatsappBulkSend: (message: string, tag?: string, contactIds?: string[]) => request('/whatsapp/bulk-send/', { method: 'POST', body: JSON.stringify({ message, tag, contactIds }) }),
 };
