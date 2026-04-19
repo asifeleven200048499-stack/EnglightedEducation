@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://enlightedleads.onrender.com/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://englightededucation.onrender.com/api';
 
 async function request(path: string, options?: RequestInit) {
   const res = await fetch(`${BASE_URL}${path}`, {
