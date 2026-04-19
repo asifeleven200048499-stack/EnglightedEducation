@@ -76,15 +76,7 @@ export function useStore() {
     setMessages(prev => ({ ...prev, [contactId]: msgs.map(parseMessage) }));
   }, []);
 
-  // Poll contacts every 60 seconds to catch new incoming conversations
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const c = await api.getContacts(500);
-      setContacts(c.data.map(parseContact));
-      setTotalContacts(c.total);
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // No background polling - contacts update instantly when added/modified
 
   // ── Contact Actions ──────────────────────────────────────────────────────
 
@@ -99,6 +91,7 @@ export function useStore() {
       leadScore: contactData.leadScore || 50,
     });
     setContacts(prev => [parseContact(newContact), ...prev]);
+    setTotalContacts(prev => prev + 1);
     return newContact;
   }, []);
 
@@ -122,7 +115,10 @@ export function useStore() {
         else throw e;
       }
     }));
-    if (created.length > 0) setContacts(prev => [...created, ...prev]);
+    if (created.length > 0) {
+      setContacts(prev => [...created, ...prev]);
+      setTotalContacts(prev => prev + created.length);
+    }
     return { created: created.length, duplicates };
   }, []);
 
