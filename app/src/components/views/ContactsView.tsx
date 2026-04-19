@@ -388,20 +388,6 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
             </TableBody>
           </Table>
         </Card>
-
-      {/* Infinite scroll loader */}
-      <div ref={loaderRef} className="py-4 text-center">
-        {store.loadingMore && (
-          <div className="flex items-center justify-center gap-2 text-slate-500">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Loading more contacts...</span>
-          </div>
-        )}
-        {!store.hasMoreContacts && store.contacts.length > 0 && (
-          <p className="text-sm text-slate-400">All {store.totalContacts} contacts loaded</p>
-        )}
-      </div>
-
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredContacts.map((contact: Contact) => (
@@ -482,6 +468,19 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
           ))}
         </div>
       )}
+
+      {/* Infinite scroll loader */}
+      <div ref={loaderRef} className="py-4 text-center">
+        {store.loadingMore && (
+          <div className="flex items-center justify-center gap-2 text-slate-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading more contacts...</span>
+          </div>
+        )}
+        {!store.hasMoreContacts && store.contacts.length > 0 && (
+          <p className="text-sm text-slate-400">All {store.totalContacts} contacts loaded</p>
+        )}
+      </div>
 
       {/* Import Modal */}
       <ImportContactModal 
