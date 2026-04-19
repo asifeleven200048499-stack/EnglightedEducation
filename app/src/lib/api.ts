@@ -15,7 +15,7 @@ async function request(path: string, options?: RequestInit) {
 
 export const api = {
   // Contacts
-  getContacts: () => request('/contacts/'),
+  getContacts: (limit?: number) => request(`/contacts/${limit ? `?limit=${limit}` : ''}`),
   createContact: (data: any) => request('/contacts/', { method: 'POST', body: JSON.stringify(data) }),
   updateContact: (id: string, data: any) => request(`/contacts/${id}/`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: string) => request(`/contacts/${id}/`, { method: 'DELETE' }),

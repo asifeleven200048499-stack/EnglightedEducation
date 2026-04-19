@@ -51,7 +51,7 @@ export function useStore() {
   // Load all data on mount
   useEffect(() => {
     Promise.all([
-      api.getContacts(),
+      api.getContacts(500),
       api.getCampaigns(),
       api.getTasks(),
       api.getAutomations(),
@@ -74,12 +74,12 @@ export function useStore() {
     setMessages(prev => ({ ...prev, [contactId]: msgs.map(parseMessage) }));
   }, []);
 
-  // Poll contacts every 5 seconds to catch new incoming conversations
+  // Poll contacts every 60 seconds to catch new incoming conversations
   useEffect(() => {
     const interval = setInterval(async () => {
-      const c = await api.getContacts();
+      const c = await api.getContacts(500);
       setContacts(c.map(parseContact));
-    }, 5000);
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 

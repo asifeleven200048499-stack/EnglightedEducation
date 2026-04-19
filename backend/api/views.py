@@ -85,7 +85,10 @@ def serialize_caller(c):
 @require_http_methods(['GET', 'POST'])
 def contacts_list(request):
     if request.method == 'GET':
-        contacts = Contact.objects.all()
+        contacts = Contact.objects.all().order_by('-created_at')
+        limit = request.GET.get('limit')
+        if limit:
+            contacts = contacts[:int(limit)]
         return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
 
     data = json.loads(request.body)
