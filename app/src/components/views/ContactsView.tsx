@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { createWorker } from 'tesseract.js';
 import {
   Users,
@@ -86,6 +86,21 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && store.hasMoreContacts && !store.loadingMore) {
+          store.loadMoreContacts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [store.hasMoreContacts, store.loadingMore, store.loadMoreContacts]);
 
   // Filter contacts
   const filteredContacts = store.filterContacts({
@@ -373,6 +388,20 @@ export function ContactsView({ store, searchQuery, setSelectedContact }: Contact
             </TableBody>
           </Table>
         </Card>
+
+      {/* Infinite scroll loader */}
+      <div ref={loaderRef} className="py-4 text-center">
+        {store.loadingMore && (
+          <div className="flex items-center justify-center gap-2 text-slate-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading more contacts...</span>
+          </div>
+        )}
+        {!store.hasMoreContacts && store.contacts.length > 0 && (
+          <p className="text-sm text-slate-400">All {store.totalContacts} contacts loaded</p>
+        )}
+      </div>
+
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredContacts.map((contact: Contact) => (

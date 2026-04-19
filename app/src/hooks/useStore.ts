@@ -17,6 +17,9 @@ import { api } from '@/lib/api';
 export function useStore() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [totalContacts, setTotalContacts] = useState(0);
+  const [contactsOffset, setContactsOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreContacts, setHasMoreContacts] = useState(true);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -52,19 +55,34 @@ export function useStore() {
   // Load all data on mount
   useEffect(() => {
     Promise.all([
-      api.getContacts(500),
+      api.getContacts(50, 0),
       api.getCampaigns(),
       api.getTasks(),
       api.getAutomations(),
     ]).then(([c, camp, t, a]) => {
       setContacts(c.data.map(parseContact));
       setTotalContacts(c.total);
+      setContactsOffset(50);
+      setHasMoreContacts(c.data.length === 50);
       setCampaigns(camp);
       setTasks(t);
       setAutomations(a);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const loadMoreContacts = useCallback(async () => {
+    if (loadingMore || !hasMoreContacts) return;
+    setLoadingMore(true);
+    try {
+      const c = await api.getContacts(50, contactsOffset);
+      setContacts(prev => [...prev, ...c.data.map(parseContact)]);
+      setContactsOffset(prev => prev + 50);
+      setHasMoreContacts(c.data.length === 50);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMoreContacts, contactsOffset]);
 
   // Load messages for a contact when needed
   const loadMessages = useCallback(async (contactId: string) => {
@@ -365,11 +383,12 @@ export function useStore() {
   }, []);
 
   return {
-    contacts, totalContacts, campaigns, automations, tasks, messages, loading,
+    contacts, totalContacts, loadingMore, hasMoreContacts, campaigns, automations, tasks, messages, loading,
     currentUser, segments: [],
     notifications: [],
     addContact, addContacts, updateContact, deleteContact,
     addTagToContact, removeTagFromContact, addNote, filterContacts,
+    loadMoreContacts,
     createCampaign, updateCampaign, deleteCampaign,
     createAutomation, updateAutomation, deleteAutomation, toggleAutomation,
     createTask, updateTask, completeTask, deleteTask,

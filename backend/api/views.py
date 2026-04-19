@@ -87,11 +87,12 @@ def contacts_list(request):
     if request.method == 'GET':
         contacts = Contact.objects.all().order_by('-created_at')
         total = contacts.count()
-        limit = request.GET.get('limit')
-        if limit:
-            contacts = contacts[:int(limit)]
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
+        contacts = contacts[offset:offset + limit]
         response = JsonResponse([serialize_contact(c) for c in contacts], safe=False)
         response['X-Total-Count'] = total
+        response['Access-Control-Expose-Headers'] = 'X-Total-Count'
         return response
 
     data = json.loads(request.body)

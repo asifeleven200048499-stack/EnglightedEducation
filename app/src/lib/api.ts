@@ -25,7 +25,7 @@ async function requestWithMeta(path: string) {
 
 export const api = {
   // Contacts
-  getContacts: (limit?: number) => requestWithMeta(`/contacts/${limit ? `?limit=${limit}` : ''}`),
+  getContacts: (limit = 50, offset = 0) => requestWithMeta(`/contacts/?limit=${limit}&offset=${offset}`),
   createContact: (data: any) => request('/contacts/', { method: 'POST', body: JSON.stringify(data) }),
   updateContact: (id: string, data: any) => request(`/contacts/${id}/`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: string) => request(`/contacts/${id}/`, { method: 'DELETE' }),
