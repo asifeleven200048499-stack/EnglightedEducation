@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { inspectAttr } from 'kimi-plugin-inspect-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   base: './',
   plugins: [inspectAttr(), react()],
@@ -13,6 +12,6 @@ export default defineConfig({
     },
   },
   preview: {
-    allowedHosts: ['enlighted.onrender.com'],
+    allowedHosts: ['enlighted.onrender.com', 'englightededucation-1.onrender.com'],
   },
 });
