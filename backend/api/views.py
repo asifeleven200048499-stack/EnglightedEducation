@@ -86,10 +86,13 @@ def serialize_caller(c):
 def contacts_list(request):
     if request.method == 'GET':
         contacts = Contact.objects.all().order_by('-created_at')
+        total = contacts.count()
         limit = request.GET.get('limit')
         if limit:
             contacts = contacts[:int(limit)]
-        return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
+        response = JsonResponse([serialize_contact(c) for c in contacts], safe=False)
+        response['X-Total-Count'] = total
+        return response
 
     data = json.loads(request.body)
     phone = data.get('phone', '').strip()

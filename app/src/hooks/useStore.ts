@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 
 export function useStore() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [totalContacts, setTotalContacts] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -56,7 +57,8 @@ export function useStore() {
       api.getTasks(),
       api.getAutomations(),
     ]).then(([c, camp, t, a]) => {
-      setContacts(c.map(parseContact));
+      setContacts(c.data.map(parseContact));
+      setTotalContacts(c.total);
       setCampaigns(camp);
       setTasks(t);
       setAutomations(a);
@@ -78,7 +80,8 @@ export function useStore() {
   useEffect(() => {
     const interval = setInterval(async () => {
       const c = await api.getContacts(500);
-      setContacts(c.map(parseContact));
+      setContacts(c.data.map(parseContact));
+      setTotalContacts(c.total);
     }, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -324,7 +327,7 @@ export function useStore() {
     const pipelineDistribution: Record<LeadStatus, number> = { new: 0, contacted: 0, interested: 0, qualified: 0, converted: 0, lost: 0 };
     contacts.forEach(c => pipelineDistribution[c.status]++);
     return {
-      totalContacts: contacts.length,
+      totalContacts: totalContacts || contacts.length,
       newContactsToday: contacts.filter(c => c.createdAt >= today).length,
       activeLeads: contacts.filter(c => ['interested', 'qualified'].includes(c.status)).length,
       conversionRate: contacts.length > 0 ? Math.round((contacts.filter(c => c.status === 'converted').length / contacts.length) * 100) : 0,
@@ -366,7 +369,7 @@ export function useStore() {
   }, []);
 
   return {
-    contacts, campaigns, automations, tasks, messages, loading,
+    contacts, totalContacts, campaigns, automations, tasks, messages, loading,
     currentUser, segments: [],
     notifications: [],
     addContact, addContacts, updateContact, deleteContact,

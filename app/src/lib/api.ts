@@ -13,9 +13,19 @@ async function request(path: string, options?: RequestInit) {
   return res.json();
 }
 
+async function requestWithMeta(path: string) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const data = await res.json();
+  const total = res.headers.get('X-Total-Count');
+  return { data, total: total ? parseInt(total) : data.length };
+}
+
 export const api = {
   // Contacts
-  getContacts: (limit?: number) => request(`/contacts/${limit ? `?limit=${limit}` : ''}`),
+  getContacts: (limit?: number) => requestWithMeta(`/contacts/${limit ? `?limit=${limit}` : ''}`),
   createContact: (data: any) => request('/contacts/', { method: 'POST', body: JSON.stringify(data) }),
   updateContact: (id: string, data: any) => request(`/contacts/${id}/`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: string) => request(`/contacts/${id}/`, { method: 'DELETE' }),
