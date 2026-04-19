@@ -341,7 +341,7 @@ export function useStore() {
     const pipelineDistribution: Record<LeadStatus, number> = { new: 0, contacted: 0, interested: 0, qualified: 0, converted: 0, lost: 0 };
     contacts.forEach(c => pipelineDistribution[c.status]++);
     return {
-      totalContacts: totalContacts || contacts.length,
+      totalContacts: totalContacts,
       newContactsToday: contacts.filter(c => c.createdAt >= today).length,
       activeLeads: contacts.filter(c => ['interested', 'qualified'].includes(c.status)).length,
       conversionRate: contacts.length > 0 ? Math.round((contacts.filter(c => c.status === 'converted').length / contacts.length) * 100) : 0,
