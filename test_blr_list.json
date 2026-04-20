@@ -1,0 +1,36 @@
+{
+  "messaging_product": "whatsapp",
+  "to": "+96879369103",
+  "type": "interactive",
+  "interactive": {
+    "type": "list",
+    "body": {
+      "text": "🎓 *BANGALORE COLLEGE LIST*\n\nHere are our top colleges in Bangalore. Select below to explore more:"
+    },
+    "action": {
+      "button": "View Bangalore List",
+      "sections": [
+        {
+          "title": "Top Colleges",
+          "rows": [
+            {"id": "blr_c1", "title": "PES University"},
+            {"id": "blr_c2", "title": "Christ University"},
+            {"id": "blr_c3", "title": "Alliance University"},
+            {"id": "blr_c4", "title": "Presidency University"},
+            {"id": "blr_c5", "title": "REVA University"},
+            {"id": "blr_c6", "title": "BGS & SJB Group"},
+            {"id": "blr_c7", "title": "Sapthagiri University"}
+          ]
+        },
+        {
+          "title": "More Colleges",
+          "rows": [
+            {"id": "blr_degree", "title": "More Degree Colleges"},
+            {"id": "blr_medical", "title": "More Medical Colleges"},
+            {"id": "blr_engineering", "title": "More Engineering"}
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -651,73 +651,71 @@ def whatsapp_webhook(request):
                         selected_id = button_id or list_id
                         
                         if selected_id in ['bangalore', 'mangalore', 'kerala']:
-                            city_name = selected_id.title()
                             contact, _ = Contact.objects.get_or_create(
                                 phone=phone,
                                 defaults={'name': phone, 'source': 'WhatsApp'}
                             )
 
                             if selected_id == 'bangalore':
+                                _send_wa_message(phone, 'Welcome to ENLIGHTED Education!\n\nWe help students find the best colleges across India. Here is our Bangalore college list:')
                                 _send_wa_interactive_list(
                                     phone,
-                                    '🎓 *BANGALORE COLLEGE LIST*
-
-Here are our top colleges in Bangalore. Select below to explore more:',
+                                    'BANGALORE Colleges',
                                     'View Bangalore List',
                                     [{
                                         'title': 'Top Colleges',
                                         'rows': [
-                                            {'id': 'blr_c1', 'title': 'PES University', 'description': 'Top ranked university'},
-                                            {'id': 'blr_c2', 'title': 'Christ University', 'description': 'Premier institution'},
-                                            {'id': 'blr_c3', 'title': 'Alliance University', 'description': 'Management & Engineering'},
-                                            {'id': 'blr_c4', 'title': 'Presidency University', 'description': 'Multi-discipline university'},
-                                            {'id': 'blr_c5', 'title': 'REVA University', 'description': 'Engineering & Sciences'},
-                                            {'id': 'blr_c6', 'title': 'BGS & SJB Group', 'description': 'Group of institutions'},
-                                            {'id': 'blr_c7', 'title': 'Sapthagiri NPS University', 'description': 'Medical & Engineering'},
+                                            {'id': 'blr_c1', 'title': 'PES University'},
+                                            {'id': 'blr_c2', 'title': 'Christ University'},
+                                            {'id': 'blr_c3', 'title': 'Alliance University'},
+                                            {'id': 'blr_c4', 'title': 'Presidency University'},
+                                            {'id': 'blr_c5', 'title': 'REVA University'},
+                                            {'id': 'blr_c6', 'title': 'BGS & SJB Group'},
+                                            {'id': 'blr_c7', 'title': 'Sapthagiri University'},
                                         ]
                                     },
                                     {
                                         'title': 'More Colleges',
                                         'rows': [
-                                            {'id': 'blr_degree', 'title': 'More Degree Colleges', 'description': 'View all degree colleges'},
-                                            {'id': 'blr_medical', 'title': 'More Medical Colleges', 'description': 'View all medical colleges'},
-                                            {'id': 'blr_engineering', 'title': 'More Engineering Colleges', 'description': 'View all engineering colleges'},
+                                            {'id': 'blr_degree', 'title': 'More Degree Colleges'},
+                                            {'id': 'blr_medical', 'title': 'More Medical Colleges'},
+                                            {'id': 'blr_engineering', 'title': 'More Engineering'},
                                         ]
                                     }]
                                 )
                                 content = 'Bangalore college list sent'
 
                             elif selected_id == 'mangalore':
+                                _send_wa_message(phone, 'Welcome to ENLIGHTED Education!\n\nWe help students find the best colleges across India. Here is our Mangalore college list:')
                                 _send_wa_interactive_list(
                                     phone,
-                                    '🎓 *MANGALORE COLLEGE LIST*
-
-Here are our top colleges in Mangalore. Select below to explore more:',
+                                    'MANGALORE Colleges',
                                     'View Mangalore List',
                                     [{
                                         'title': 'Top Colleges',
                                         'rows': [
-                                            {'id': 'mlr_c1', 'title': 'Yenepoya University', 'description': 'Medical & Sciences'},
-                                            {'id': 'mlr_c2', 'title': 'Srinivas University', 'description': 'Top ranked university'},
-                                            {'id': 'mlr_c3', 'title': 'Indiana Medical College', 'description': 'Medical institution'},
-                                            {'id': 'mlr_c4', 'title': 'AJ College of Engineering', 'description': 'Engineering college'},
-                                            {'id': 'mlr_c5', 'title': 'Aliyah College of Nursing', 'description': 'Nursing college'},
-                                            {'id': 'mlr_c6', 'title': 'Unity Medical College', 'description': 'Medical college'},
-                                            {'id': 'mlr_c7', 'title': 'Sridevi College', 'description': 'Degree & Sciences'},
+                                            {'id': 'mlr_c1', 'title': 'Yenepoya University'},
+                                            {'id': 'mlr_c2', 'title': 'Srinivas University'},
+                                            {'id': 'mlr_c3', 'title': 'Indiana Medical College'},
+                                            {'id': 'mlr_c4', 'title': 'AJ College Engineering'},
+                                            {'id': 'mlr_c5', 'title': 'Aliyah Nursing College'},
+                                            {'id': 'mlr_c6', 'title': 'Unity Medical College'},
+                                            {'id': 'mlr_c7', 'title': 'Sridevi College'},
                                         ]
                                     },
                                     {
                                         'title': 'More Colleges',
                                         'rows': [
-                                            {'id': 'mlr_degree', 'title': 'More Degree Colleges', 'description': 'Yenepoya, Srinivas, Aloysius...'},
-                                            {'id': 'mlr_medical', 'title': 'More Medical Colleges', 'description': 'Vidya, Sahayadri, Pragathy...'},
-                                            {'id': 'mlr_engineering', 'title': 'More Engineering Colleges', 'description': 'Srinivas, AJ, Sree Dhevi...'},
+                                            {'id': 'mlr_degree', 'title': 'More Degree Colleges'},
+                                            {'id': 'mlr_medical', 'title': 'More Medical Colleges'},
+                                            {'id': 'mlr_engineering', 'title': 'More Engineering'},
                                         ]
                                     }]
                                 )
                                 content = 'Mangalore college list sent'
 
                             else:
+                                _send_wa_message(phone, 'Welcome to ENLIGHTED Education!\n\nWe help students find the best colleges across India. Here is our Kerala college list:')
                                 college_reply = COLLEGE_LISTS.get('Kerala')
                                 _send_wa_message(phone, college_reply)
                                 content = college_reply
@@ -734,7 +732,6 @@ Here are our top colleges in Mangalore. Select below to explore more:',
                             contact.save()
                             continue
 
-                        # Handle category buttons for Bangalore and Mangalore
                         category_map = {
                             'blr_degree': 'Bangalore_Degree',
                             'blr_medical': 'Bangalore_Medical',

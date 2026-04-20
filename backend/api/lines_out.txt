@@ -1,0 +1,922 @@
+0: import json
+1: from datetime import datetime
+2: from django.http import JsonResponse, HttpResponse
+3: from django.views.decorators.csrf import csrf_exempt
+4: from django.views.decorators.http import require_http_methods
+5: from django.utils import timezone as tz
+6: from django.conf import settings
+7: import requests
+8: from .models import Contact, Campaign, Automation, Task, Message, Caller
+9: 
+10: 
+11: def serialize_contact(c):
+12:     return {
+13:         'id': str(c.id), 'name': c.name, 'phone': c.phone, 'email': c.email,
+14:         'course': c.course, 'school': c.school, 'source': c.source,
+15:         'status': c.status, 'tags': c.tags, 'leadScore': c.lead_score,
+16:         'intent': c.intent, 'messageCount': c.message_count, 'replyCount': c.reply_count,
+17:         'hasOptedIn': c.has_opted_in, 'optedInAt': c.opted_in_at.isoformat() if c.opted_in_at else None,
+18:         'notes': c.notes, 'customFields': c.custom_fields,
+19:         'createdAt': c.created_at.isoformat(), 'updatedAt': c.updated_at.isoformat(),
+20:         'lastContactedAt': c.last_contacted_at.isoformat() if c.last_contacted_at else None,
+21:         'lastReplyAt': c.last_reply_at.isoformat() if c.last_reply_at else None,
+22:     }
+23: 
+24: 
+25: def serialize_campaign(c):
+26:     return {
+27:         'id': str(c.id), 'name': c.name, 'description': c.description,
+28:         'messageTemplate': c.message_template, 'mediaUrl': c.media_url,
+29:         'targetTags': c.target_tags, 'targetSegments': c.target_segments,
+30:         'targetContactIds': c.target_contact_ids, 'status': c.status,
+31:         'scheduledAt': c.scheduled_at.isoformat() if c.scheduled_at else None,
+32:         'startedAt': c.started_at.isoformat() if c.started_at else None,
+33:         'completedAt': c.completed_at.isoformat() if c.completed_at else None,
+34:         'totalRecipients': c.total_recipients, 'sentCount': c.sent_count,
+35:         'deliveredCount': c.delivered_count, 'readCount': c.read_count,
+36:         'repliedCount': c.replied_count, 'failedCount': c.failed_count,
+37:         'abTestEnabled': c.ab_test_enabled, 'variantA': c.variant_a,
+38:         'variantB': c.variant_b, 'createdBy': c.created_by,
+39:         'createdAt': c.created_at.isoformat(),
+40:     }
+41: 
+42: 
+43: def serialize_automation(a):
+44:     return {
+45:         'id': str(a.id), 'name': a.name, 'description': a.description,
+46:         'isActive': a.is_active, 'trigger': a.trigger, 'actions': a.actions,
+47:         'createdAt': a.created_at.isoformat(), 'updatedAt': a.updated_at.isoformat(),
+48:     }
+49: 
+50: 
+51: def serialize_task(t):
+52:     return {
+53:         'id': str(t.id), 'title': t.title, 'description': t.description,
+54:         'contactId': t.contact_id, 'assignedTo': t.assigned_to, 'assignedBy': t.assigned_by,
+55:         'status': t.status, 'priority': t.priority, 'dueDate': t.due_date.isoformat(),
+56:         'completedAt': t.completed_at.isoformat() if t.completed_at else None,
+57:         'reminderAt': t.reminder_at.isoformat() if t.reminder_at else None,
+58:         'createdAt': t.created_at.isoformat(), 'updatedAt': t.updated_at.isoformat(),
+59:     }
+60: 
+61: 
+62: def serialize_message(m):
+63:     return {
+64:         'id': str(m.id), 'contactId': m.contact_id, 'content': m.content,
+65:         'direction': m.direction, 'status': m.status, 'sentAt': m.sent_at.isoformat(),
+66:         'deliveredAt': m.delivered_at.isoformat() if m.delivered_at else None,
+67:         'readAt': m.read_at.isoformat() if m.read_at else None,
+68:         'mediaUrl': m.media_url, 'mediaType': m.media_type,
+69:         'campaignId': m.campaign_id, 'isAutomated': m.is_automated,
+70:     }
+71: 
+72: 
+73: def serialize_caller(c):
+74:     return {
+75:         'id': str(c.id), 'name': c.name, 'username': c.username,
+76:         'assignedSchools': c.assigned_schools, 'assignedCourses': c.assigned_courses,
+77:         'isActive': c.is_active, 'createdAt': c.created_at.isoformat(),
+78:     }
+79: 
+80: 
+81: # ─── CONTACTS ────────────────────────────────────────────────────────────────
+82: 
+83: @csrf_exempt
+84: @require_http_methods(['GET', 'POST'])
+85: def contacts_list(request):
+86:     if request.method == 'GET':
+87:         contacts = Contact.objects.all().order_by('-created_at')
+88:         total = contacts.count()
+89:         limit = int(request.GET.get('limit', 50))
+90:         offset = int(request.GET.get('offset', 0))
+91:         contacts = contacts[offset:offset + limit]
+92:         response = JsonResponse([serialize_contact(c) for c in contacts], safe=False)
+93:         response['X-Total-Count'] = total
+94:         response['Access-Control-Expose-Headers'] = 'X-Total-Count'
+95:         return response
+96: 
+97:     data = json.loads(request.body)
+98:     phone = data.get('phone', '').strip()
+99:     if phone and Contact.objects.filter(phone=phone).exists():
+100:         existing = Contact.objects.get(phone=phone)
+101:         return JsonResponse({'error': 'duplicate', 'message': 'A contact with this number already exists.', 'existing': serialize_contact(existing)}, status=409)
+102: 
+103:     contact = Contact.objects.create(
+104:         name=data.get('name', 'Unknown'), phone=phone,
+105:         email=data.get('email', ''), course=data.get('course', ''),
+106:         school=data.get('school', ''), source=data.get('source', 'Manual Entry'),
+107:         status=data.get('status', 'new'), tags=data.get('tags', []),
+108:         lead_score=data.get('leadScore', 50), intent=data.get('intent', 'neutral'),
+109:         notes=data.get('notes', []), custom_fields=data.get('customFields', {}),
+110:     )
+111:     return JsonResponse(serialize_contact(contact), status=201)
+112: 
+113: 
+114: @csrf_exempt
+115: @require_http_methods(['GET', 'PUT', 'DELETE'])
+116: def contact_detail(request, contact_id):
+117:     try:
+118:         contact = Contact.objects.get(id=contact_id)
+119:     except Contact.DoesNotExist:
+120:         return JsonResponse({'error': 'Not found'}, status=404)
+121: 
+122:     if request.method == 'GET':
+123:         return JsonResponse(serialize_contact(contact))
+124: 
+125:     if request.method == 'PUT':
+126:         data = json.loads(request.body)
+127:         field_map = {
+128:             'name': 'name', 'phone': 'phone', 'email': 'email',
+129:             'course': 'course', 'school': 'school', 'source': 'source',
+130:             'status': 'status', 'tags': 'tags', 'leadScore': 'lead_score',
+131:             'intent': 'intent', 'messageCount': 'message_count',
+132:             'replyCount': 'reply_count', 'hasOptedIn': 'has_opted_in',
+133:             'notes': 'notes', 'customFields': 'custom_fields',
+134:         }
+135:         for api_key, model_field in field_map.items():
+136:             if api_key in data:
+137:                 setattr(contact, model_field, data[api_key])
+138:         contact.save()
+139:         return JsonResponse(serialize_contact(contact))
+140: 
+141:     contact.delete()
+142:     return JsonResponse({'success': True})
+143: 
+144: 
+145: # ─── CAMPAIGNS ───────────────────────────────────────────────────────────────
+146: 
+147: @csrf_exempt
+148: @require_http_methods(['GET', 'POST'])
+149: def campaigns_list(request):
+150:     if request.method == 'GET':
+151:         return JsonResponse([serialize_campaign(c) for c in Campaign.objects.all()], safe=False)
+152: 
+153:     data = json.loads(request.body)
+154:     campaign = Campaign.objects.create(
+155:         name=data.get('name', 'Untitled Campaign'), description=data.get('description', ''),
+156:         message_template=data.get('messageTemplate', ''), target_tags=data.get('targetTags', []),
+157:         target_segments=data.get('targetSegments', []), status=data.get('status', 'draft'),
+158:         ab_test_enabled=data.get('abTestEnabled', False), variant_a=data.get('variantA', ''),
+159:         variant_b=data.get('variantB', ''), created_by=data.get('createdBy', 'Admin'),
+160:     )
+161:     return JsonResponse(serialize_campaign(campaign), status=201)
+162: 
+163: 
+164: @csrf_exempt
+165: @require_http_methods(['GET', 'PUT', 'DELETE'])
+166: def campaign_detail(request, campaign_id):
+167:     try:
+168:         campaign = Campaign.objects.get(id=campaign_id)
+169:     except Campaign.DoesNotExist:
+170:         return JsonResponse({'error': 'Not found'}, status=404)
+171: 
+172:     if request.method == 'GET':
+173:         return JsonResponse(serialize_campaign(campaign))
+174: 
+175:     if request.method == 'PUT':
+176:         data = json.loads(request.body)
+177:         field_map = {
+178:             'name': 'name', 'description': 'description', 'messageTemplate': 'message_template',
+179:             'status': 'status', 'targetTags': 'target_tags', 'targetSegments': 'target_segments',
+180:             'totalRecipients': 'total_recipients', 'sentCount': 'sent_count',
+181:             'deliveredCount': 'delivered_count', 'readCount': 'read_count',
+182:             'repliedCount': 'replied_count', 'failedCount': 'failed_count',
+183:             'abTestEnabled': 'ab_test_enabled', 'variantA': 'variant_a', 'variantB': 'variant_b',
+184:         }
+185:         for api_key, model_field in field_map.items():
+186:             if api_key in data:
+187:                 setattr(campaign, model_field, data[api_key])
+188:         campaign.save()
+189:         return JsonResponse(serialize_campaign(campaign))
+190: 
+191:     campaign.delete()
+192:     return JsonResponse({'success': True})
+193: 
+194: 
+195: # ─── AUTOMATIONS ─────────────────────────────────────────────────────────────
+196: 
+197: @csrf_exempt
+198: @require_http_methods(['GET', 'POST'])
+199: def automations_list(request):
+200:     if request.method == 'GET':
+201:         return JsonResponse([serialize_automation(a) for a in Automation.objects.all()], safe=False)
+202: 
+203:     data = json.loads(request.body)
+204:     automation = Automation.objects.create(
+205:         name=data.get('name', 'Untitled Automation'), description=data.get('description', ''),
+206:         is_active=data.get('isActive', False),
+207:         trigger=data.get('trigger', {'type': 'new-contact', 'config': {}}),
+208:         actions=data.get('actions', []),
+209:     )
+210:     return JsonResponse(serialize_automation(automation), status=201)
+211: 
+212: 
+213: @csrf_exempt
+214: @require_http_methods(['GET', 'PUT', 'DELETE'])
+215: def automation_detail(request, automation_id):
+216:     try:
+217:         automation = Automation.objects.get(id=automation_id)
+218:     except Automation.DoesNotExist:
+219:         return JsonResponse({'error': 'Not found'}, status=404)
+220: 
+221:     if request.method == 'GET':
+222:         return JsonResponse(serialize_automation(automation))
+223: 
+224:     if request.method == 'PUT':
+225:         data = json.loads(request.body)
+226:         for api_key, model_field in [('name', 'name'), ('description', 'description'), ('isActive', 'is_active'), ('trigger', 'trigger'), ('actions', 'actions')]:
+227:             if api_key in data:
+228:                 setattr(automation, model_field, data[api_key])
+229:         automation.save()
+230:         return JsonResponse(serialize_automation(automation))
+231: 
+232:     automation.delete()
+233:     return JsonResponse({'success': True})
+234: 
+235: 
+236: # ─── TASKS ───────────────────────────────────────────────────────────────────
+237: 
+238: @csrf_exempt
+239: @require_http_methods(['GET', 'POST'])
+240: def tasks_list(request):
+241:     if request.method == 'GET':
+242:         return JsonResponse([serialize_task(t) for t in Task.objects.all()], safe=False)
+243: 
+244:     data = json.loads(request.body)
+245:     due_date_raw = data.get('dueDate', '')
+246:     try:
+247:         due_date = datetime.fromisoformat(due_date_raw.replace('Z', '+00:00')) if due_date_raw else tz.now()
+248:     except Exception:
+249:         due_date = tz.now()
+250: 
+251:     task = Task.objects.create(
+252:         title=data.get('title', 'Untitled Task'), description=data.get('description', ''),
+253:         contact_id=data.get('contactId', ''), assigned_to=data.get('assignedTo', 'Admin'),
+254:         assigned_by=data.get('assignedBy', 'Admin'), status=data.get('status', 'pending'),
+255:         priority=data.get('priority', 'medium'), due_date=due_date,
+256:     )
+257:     return JsonResponse(serialize_task(task), status=201)
+258: 
+259: 
+260: @csrf_exempt
+261: @require_http_methods(['GET', 'PUT', 'DELETE'])
+262: def task_detail(request, task_id):
+263:     try:
+264:         task = Task.objects.get(id=task_id)
+265:     except Task.DoesNotExist:
+266:         return JsonResponse({'error': 'Not found'}, status=404)
+267: 
+268:     if request.method == 'GET':
+269:         return JsonResponse(serialize_task(task))
+270: 
+271:     if request.method == 'PUT':
+272:         data = json.loads(request.body)
+273:         for api_key, model_field in [('title', 'title'), ('description', 'description'), ('status', 'status'), ('priority', 'priority'), ('assignedTo', 'assigned_to')]:
+274:             if api_key in data:
+275:                 setattr(task, model_field, data[api_key])
+276:         if 'dueDate' in data and data['dueDate']:
+277:             try:
+278:                 task.due_date = datetime.fromisoformat(data['dueDate'].replace('Z', '+00:00'))
+279:             except Exception:
+280:                 pass
+281:         if data.get('status') == 'completed' and not task.completed_at:
+282:             task.completed_at = tz.now()
+283:         task.save()
+284:         return JsonResponse(serialize_task(task))
+285: 
+286:     task.delete()
+287:     return JsonResponse({'success': True})
+288: 
+289: 
+290: # ─── MESSAGES ────────────────────────────────────────────────────────────────
+291: 
+292: @csrf_exempt
+293: @require_http_methods(['GET', 'POST'])
+294: def messages_list(request, contact_id):
+295:     if request.method == 'GET':
+296:         msgs = Message.objects.filter(contact_id=contact_id)
+297:         return JsonResponse([serialize_message(m) for m in msgs], safe=False)
+298: 
+299:     data = json.loads(request.body)
+300:     message = Message.objects.create(
+301:         contact_id=contact_id, content=data.get('content', ''),
+302:         direction=data.get('direction', 'outbound'), status=data.get('status', 'sent'),
+303:         is_automated=data.get('isAutomated', False), campaign_id=data.get('campaignId', ''),
+304:     )
+305:     try:
+306:         contact = Contact.objects.get(id=contact_id)
+307:         if message.direction == 'outbound':
+308:             contact.message_count += 1
+309:             contact.last_contacted_at = tz.now()
+310:         else:
+311:             contact.reply_count += 1
+312:             contact.last_reply_at = tz.now()
+313:         contact.save()
+314:     except Contact.DoesNotExist:
+315:         pass
+316: 
+317:     return JsonResponse(serialize_message(message), status=201)
+318: 
+319: 
+320: # ─── UNIQUE SCHOOLS & COURSES ───────────────────────────────────────────────
+321: 
+322: @csrf_exempt
+323: @require_http_methods(['GET'])
+324: def contact_options(request):
+325:     schools = list(Contact.objects.exclude(school='').values_list('school', flat=True).distinct().order_by('school'))
+326:     courses = list(Contact.objects.exclude(course='').values_list('course', flat=True).distinct().order_by('course'))
+327:     return JsonResponse({'schools': schools, 'courses': courses})
+328: 
+329: 
+330: # ─── CALLERS ─────────────────────────────────────────────────────────────────
+331: 
+332: @csrf_exempt
+333: @require_http_methods(['GET', 'POST'])
+334: def callers_list(request):
+335:     if request.method == 'GET':
+336:         return JsonResponse([serialize_caller(c) for c in Caller.objects.all()], safe=False)
+337: 
+338:     data = json.loads(request.body)
+339:     username = data.get('username', '').strip()
+340:     if Caller.objects.filter(username=username).exists():
+341:         return JsonResponse({'error': 'Username already taken'}, status=409)
+342: 
+343:     caller = Caller.objects.create(
+344:         name=data.get('name', ''),
+345:         username=username,
+346:         password=data.get('password', ''),
+347:         assigned_schools=data.get('assignedSchools', []),
+348:         assigned_courses=data.get('assignedCourses', []),
+349:         is_active=data.get('isActive', True),
+350:     )
+351:     return JsonResponse(serialize_caller(caller), status=201)
+352: 
+353: 
+354: @csrf_exempt
+355: @require_http_methods(['GET', 'PUT', 'DELETE'])
+356: def caller_detail(request, caller_id):
+357:     try:
+358:         caller = Caller.objects.get(id=caller_id)
+359:     except Caller.DoesNotExist:
+360:         return JsonResponse({'error': 'Not found'}, status=404)
+361: 
+362:     if request.method == 'GET':
+363:         return JsonResponse(serialize_caller(caller))
+364: 
+365:     if request.method == 'PUT':
+366:         data = json.loads(request.body)
+367:         for api_key, model_field in [
+368:             ('name', 'name'), ('username', 'username'), ('password', 'password'),
+369:             ('assignedSchools', 'assigned_schools'), ('assignedCourses', 'assigned_courses'),
+370:             ('isActive', 'is_active'),
+371:         ]:
+372:             if api_key in data:
+373:                 setattr(caller, model_field, data[api_key])
+374:         caller.save()
+375:         return JsonResponse(serialize_caller(caller))
+376: 
+377:     caller.delete()
+378:     return JsonResponse({'success': True})
+379: 
+380: 
+381: @csrf_exempt
+382: @require_http_methods(['POST'])
+383: def caller_login(request):
+384:     data = json.loads(request.body)
+385:     username = data.get('username', '').strip()
+386:     password = data.get('password', '')
+387:     try:
+388:         caller = Caller.objects.get(username=username, password=password, is_active=True)
+389:         return JsonResponse({'success': True, 'caller': serialize_caller(caller)})
+390:     except Caller.DoesNotExist:
+391:         return JsonResponse({'error': 'Invalid credentials or account disabled'}, status=401)
+392: 
+393: 
+394: @csrf_exempt
+395: @require_http_methods(['GET'])
+396: def caller_contacts(request, caller_id):
+397:     try:
+398:         caller = Caller.objects.get(id=caller_id)
+399:     except Caller.DoesNotExist:
+400:         return JsonResponse({'error': 'Not found'}, status=404)
+401: 
+402:     contacts = Contact.objects.all()
+403:     if caller.assigned_schools:
+404:         contacts = contacts.filter(school__in=caller.assigned_schools)
+405:     if caller.assigned_courses:
+406:         contacts = contacts.filter(course__in=caller.assigned_courses)
+407: 
+408:     return JsonResponse([serialize_contact(c) for c in contacts], safe=False)
+409: 
+410: 
+411: # ─── WHATSAPP ────────────────────────────────────────────────────────────────
+412: 
+413: GRAPH_URL = 'https://graph.facebook.com/v25.0'
+414: 
+415: 
+416: def _wa_headers():
+417:     return {
+418:         'Authorization': f'Bearer {settings.WHATSAPP_TOKEN.strip()}',
+419:         'Content-Type': 'application/json',
+420:     }
+421: 
+422: 
+423: def _send_wa_message(to, text):
+424:     # Ensure number has + prefix
+425:     if not to.startswith('+'):
+426:         to = '+' + to
+427:     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+428:     payload = {
+429:         'messaging_product': 'whatsapp',
+430:         'to': to,
+431:         'type': 'text',
+432:         'text': {'body': text},
+433:     }
+434:     res = requests.post(url, json=payload, headers=_wa_headers())
+435:     return res.json()
+436: 
+437: 
+438: def _send_wa_interactive_list(to, body_text, button_text, sections):
+439:     if not to.startswith('+'):
+440:         to = '+' + to
+441:     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+442:     payload = {
+443:         'messaging_product': 'whatsapp',
+444:         'to': to,
+445:         'type': 'interactive',
+446:         'interactive': {
+447:             'type': 'list',
+448:             'body': {'text': body_text},
+449:             'action': {
+450:                 'button': button_text,
+451:                 'sections': sections
+452:             }
+453:         }
+454:     }
+455:     res = requests.post(url, json=payload, headers=_wa_headers())
+456:     return res.json()
+457: 
+458: 
+459: COLLEGE_LISTS = {
+460:     'Bangalore': '🎓 *BANGALORE COLLEGE LIST*
+461: 
+462: 1️⃣ SRI VINAYA GROUP | FLORENCE GROUP
+463: 2️⃣ SRI SIDDHARTHA COLLEGE | JUPITER GROUP
+464: 3️⃣ HILLSIDE GROUP | BGS AND SJB GROUP
+465: 4️⃣ EAST POINT GROUP | PADMASHREE GROUP
+466: 5️⃣ ABHAYA COLLEGE | NALAPAD NURSING
+467: 6️⃣ PES UNIVERSITY | S-VYASA COLLEGE
+468: 7️⃣ KOSHYS GROUP | MATHRUSHREE COLLEGE
+469: 8️⃣ BRINDAVAN GROUP | CHRIST UNIVERSITY
+470: 9️⃣ JAIN UNIVERSITY | REVA UNIVERSITY
+471: 🔟 PRESIDENCY UNIVERSITY | GARDEN CITY UNIVERSITY',
+472: 
+473:     'Bangalore_Degree': '🎓 *DEGREE COLLEGES - BANGALORE*
+474: 
+475: 1️⃣ CHRIST COLLEGE
+476: 2️⃣ ALLIANCE COLLEGE
+477: 3️⃣ PRESIDENCY COLLEGE
+478: 4️⃣ REVA COLLEGE
+479: 5️⃣ BGS AND SJB COLLEGE
+480: 6️⃣ SAPTHAGIRI COLLEGE
+481: 7️⃣ EAST POINT COLLEGE
+482: 8️⃣ ACHARYA COLLEGE
+483: 9️⃣ KOSHYS GROUP OF INSTITUTION
+484: 🔟 YENEPOYA UNIVERSITY
+485: 1️⃣1️⃣ HILLSIDE COLLEGE
+486: 1️⃣2️⃣ BRINDAVAN COLLEGE
+487: 1️⃣3️⃣ RR COLLEGE
+488: 1️⃣4️⃣ ABBS COLLEGE
+489: 1️⃣5️⃣ HKBK COLLEGE
+490: 1️⃣6️⃣ SEA COLLEGE
+491: 1️⃣7️⃣ PADMASHREE COLLEGE
+492: 
+493: 📞 *Contact us for admissions!*
+494: 💬 Reply with course name for details',
+495: 
+496:     'Bangalore_Engineering': '⚙️ *ENGINEERING COLLEGES - BANGALORE*
+497: 
+498: 1️⃣ ALLIANCE COLLEGE
+499: 2️⃣ PRESIDENCY COLLEGE
+500: 3️⃣ REVA COLLEGE
+501: 4️⃣ BGS AND SJB COLLEGE
+502: 5️⃣ SAPTHAGIRI COLLEGE
+503: 6️⃣ EAST POINT COLLEGE
+504: 7️⃣ OXFORD COLLEGE
+505: 8️⃣ S-VYASA COLLEGE
+506: 9️⃣ ACHARYA COLLEGE
+507: 🔟 YENEPOYA UNIVERSITY
+508: 1️⃣1️⃣ BRINDAVAN COLLEGE
+509: 1️⃣2️⃣ RR COLLEGE
+510: 1️⃣3️⃣ HKBK COLLEGE
+511: 1️⃣4️⃣ SEA COLLEGE
+512: 
+513: 📞 *Contact us for admissions!*
+514: 💬 Reply with course name for details',
+515: 
+516:     'Bangalore_Medical': '🏥 *MEDICAL COLLEGES - BANGALORE*
+517: 
+518: 1️⃣ PES COLLEGE
+519: 2️⃣ CHRISTIAN COLLEGE
+520: 3️⃣ BGS AND SJB COLLEGE
+521: 4️⃣ EAST POINT COLLEGE
+522: 5️⃣ ACHARYA COLLEGE
+523: 6️⃣ YENEPOYA UNIVERSITY
+524: 7️⃣ HILLSIDE COLLEGE
+525: 8️⃣ RR COLLEGE
+526: 9️⃣ SEA COLLEGE
+527: 🔟 SRI SIDDHARTHA COLLEGE
+528: 1️⃣1️⃣ PADMASHREE COLLEGE
+529: 1️⃣2️⃣ JUPITER COLLEGE
+530: 1️⃣3️⃣ SURYA COLLEGE
+531: 1️⃣4️⃣ NALAPAD COLLEGE OF NURSING
+532: 1️⃣5️⃣ ABHAYA COLLEGE
+533: 1️⃣6️⃣ HEARTLAND COLLEGE
+534: 1️⃣7️⃣ NAVANEETHAM COLLEGE
+535: 1️⃣8️⃣ FLORENCE COLLEGE
+536: 1️⃣9️⃣ SMT LAKSHMIDEVI COLLEGE
+537: 
+538: 📞 *Contact us for admissions!*
+539: 💬 Reply with course name for details',
+540: 
+541:     'Mangalore': '🎓 *MANGALORE COLLEGE LIST*
+542: 
+543: 1️⃣ SRINIVAS UNIVERSITY
+544: 2️⃣ YENEPOYA UNIVERSITY
+545: 3️⃣ INDIANA HOSPITAL AND HEART INSTITUTE
+546: 4️⃣ AJ COLLEGE OF ENGINEERING
+547: 5️⃣ TEJASWINI GROUP OF INSTITUTION
+548: 6️⃣ UNITY ACADEMY OF EDUCATION
+549: 7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
+550: 8️⃣ ALIYAH COLLEGE OF NURSING
+551: 9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
+552: 🔟 SHREE DEVI EDUCATION TRUST',
+553: 
+554:     'Mangalore_Degree': '🎓 *DEGREE COLLEGES - MANGALORE*
+555: 
+556: 1️⃣ YENEPOYA COLLEGE
+557: 2️⃣ SRINIVAS COLLEGE
+558: 3️⃣ SRIDEVI COLLEGE
+559: 4️⃣ ALOYSIUS COLLEGE
+560: 5️⃣ P.A COLLEGE
+561: 6️⃣ AGNES COLLEGE
+562: 
+563: 📞 *Contact us for admissions!*
+564: 💬 Reply with course name for details',
+565: 
+566:     'Mangalore_Engineering': '⚙️ *ENGINEERING COLLEGES - MANGALORE*
+567: 
+568: 1️⃣ SRINIVAS COLLEGE
+569: 2️⃣ YENEPOYA COLLEGE
+570: 3️⃣ AJ COLLEGE OF ENGINEERING
+571: 4️⃣ SREE DHEVI COLLEGE
+572: 5️⃣ P.A COLLEGE
+573: 
+574: 📞 *Contact us for admissions!*
+575: 💬 Reply with course name for details',
+576: 
+577:     'Mangalore_Medical': '🏥 *MEDICAL COLLEGES - MANGALORE*
+578: 
+579: 1️⃣ YENEPOYA COLLEGE
+580: 2️⃣ INDIANA MEDICAL COLLEGE
+581: 3️⃣ ALIYAH COLLEGE OF NURSING
+582: 4️⃣ UNITY MEDICAL COLLEGE
+583: 5️⃣ SRINIVAS COLLEGE
+584: 6️⃣ VIDYA COLLEGE OF NURSING
+585: 7️⃣ SAHAYADRI COLLEGE OF NURSING
+586: 8️⃣ PRAGATHY COLLEGE OF NURSING
+587: 9️⃣ CITY COLLEGE OF NURSING
+588: 🔟 ATHENA GROUP OF INSTITUTION
+589: 
+590: 📞 *Contact us for admissions!*
+591: 💬 Reply with course name for details',
+592: 
+593:     'Manglore': '🎓 *MANGALORE COLLEGE LIST*
+594: 
+595: 1️⃣ SRINIVAS UNIVERSITY
+596: 2️⃣ YENEPOYA UNIVERSITY
+597: 3️⃣ INDIANA HOSPITAL AND HEART INSTITUTE
+598: 4️⃣ AJ COLLEGE OF ENGINEERING
+599: 5️⃣ TEJASWINI GROUP OF INSTITUTION
+600: 6️⃣ UNITY ACADEMY OF EDUCATION
+601: 7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
+602: 8️⃣ ALIYAH COLLEGE OF NURSING
+603: 9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
+604: 🔟 SHREE DEVI EDUCATION TRUST',
+605: 
+606:     'Kerala': '🎓 *KERALA COLLEGE LIST*
+607: 
+608: 1️⃣ KMM (KOCHI)
+609: 2️⃣ AL AZHAR (IDUKKI)
+610: 3️⃣ METS (CALICUT)
+611: 4️⃣ MES (KOCHI)
+612: 5️⃣ ELIMS (THRISSUR)
+613: 6️⃣ JAIN (KOCHI)
+614: 7️⃣ INDIRA GANDHI
+615: 8️⃣ YMBC (KOCHI)
+616: 
+617: 📞 *Contact us for admissions!*
+618: 💬 Reply with course name for details',
+619: }
+620: 
+621: 
+622: @csrf_exempt
+623: def whatsapp_webhook(request):
+624:     if request.method == 'GET':
+625:         mode = request.GET.get('hub.mode')
+626:         token = request.GET.get('hub.verify_token')
+627:         challenge = request.GET.get('hub.challenge')
+628:         if mode == 'subscribe' and token == settings.WHATSAPP_VERIFY_TOKEN:
+629:             return HttpResponse(challenge, content_type='text/plain')
+630:         return HttpResponse('Forbidden', status=403)
+631: 
+632:     try:
+633:         data = json.loads(request.body)
+634:         for entry in data.get('entry', []):
+635:             for change in entry.get('changes', []):
+636:                 for msg in change.get('value', {}).get('messages', []):
+637:                     phone = msg.get('from', '')
+638:                     
+639:                     # Handle interactive messages (buttons and lists)
+640:                     if msg.get('type') == 'interactive':
+641:                         interactive = msg.get('interactive', {})
+642:                         
+643:                         # Handle button clicks
+644:                         button_id = interactive.get('button_reply', {}).get('id', '')
+645:                         
+646:                         # Handle list selections
+647:                         list_id = interactive.get('list_reply', {}).get('id', '')
+648:                         
+649:                         # Get the selected option (button or list)
+650:                         selected_id = button_id or list_id
+651:                         
+652:                         if selected_id in ['bangalore', 'mangalore', 'kerala']:
+653:                             city_name = selected_id.title()
+654:                             contact, _ = Contact.objects.get_or_create(
+655:                                 phone=phone,
+656:                                 defaults={'name': phone, 'source': 'WhatsApp'}
+657:                             )
+658: 
+659:                             if selected_id == 'bangalore':
+660:                                 _send_wa_interactive_list(
+661:                                     phone,
+662:                                     '🎓 *BANGALORE COLLEGE LIST*
+663: 
+664: Here are our top colleges in Bangalore. Select below to explore more:',
+665:                                     'View Bangalore List',
+666:                                     [{
+667:                                         'title': 'Top Colleges',
+668:                                         'rows': [
+669:                                             {'id': 'blr_c1', 'title': 'PES University', 'description': 'Top ranked university'},
+670:                                             {'id': 'blr_c2', 'title': 'Christ University', 'description': 'Premier institution'},
+671:                                             {'id': 'blr_c3', 'title': 'Alliance University', 'description': 'Management & Engineering'},
+672:                                             {'id': 'blr_c4', 'title': 'Presidency University', 'description': 'Multi-discipline university'},
+673:                                             {'id': 'blr_c5', 'title': 'REVA University', 'description': 'Engineering & Sciences'},
+674:                                             {'id': 'blr_c6', 'title': 'BGS & SJB Group', 'description': 'Group of institutions'},
+675:                                             {'id': 'blr_c7', 'title': 'Sapthagiri NPS University', 'description': 'Medical & Engineering'},
+676:                                         ]
+677:                                     },
+678:                                     {
+679:                                         'title': 'More Colleges',
+680:                                         'rows': [
+681:                                             {'id': 'blr_degree', 'title': 'More Degree Colleges', 'description': 'View all degree colleges'},
+682:                                             {'id': 'blr_medical', 'title': 'More Medical Colleges', 'description': 'View all medical colleges'},
+683:                                             {'id': 'blr_engineering', 'title': 'More Engineering Colleges', 'description': 'View all engineering colleges'},
+684:                                         ]
+685:                                     }]
+686:                                 )
+687:                                 content = 'Bangalore college list sent'
+688: 
+689:                             elif selected_id == 'mangalore':
+690:                                 _send_wa_interactive_list(
+691:                                     phone,
+692:                                     '🎓 *MANGALORE COLLEGE LIST*
+693: 
+694: Here are our top colleges in Mangalore. Select below to explore more:',
+695:                                     'View Mangalore List',
+696:                                     [{
+697:                                         'title': 'Top Colleges',
+698:                                         'rows': [
+699:                                             {'id': 'mlr_c1', 'title': 'Yenepoya University', 'description': 'Medical & Sciences'},
+700:                                             {'id': 'mlr_c2', 'title': 'Srinivas University', 'description': 'Top ranked university'},
+701:                                             {'id': 'mlr_c3', 'title': 'Indiana Medical College', 'description': 'Medical institution'},
+702:                                             {'id': 'mlr_c4', 'title': 'AJ College of Engineering', 'description': 'Engineering college'},
+703:                                             {'id': 'mlr_c5', 'title': 'Aliyah College of Nursing', 'description': 'Nursing college'},
+704:                                             {'id': 'mlr_c6', 'title': 'Unity Medical College', 'description': 'Medical college'},
+705:                                             {'id': 'mlr_c7', 'title': 'Sridevi College', 'description': 'Degree & Sciences'},
+706:                                         ]
+707:                                     },
+708:                                     {
+709:                                         'title': 'More Colleges',
+710:                                         'rows': [
+711:                                             {'id': 'mlr_degree', 'title': 'More Degree Colleges', 'description': 'Yenepoya, Srinivas, Aloysius...'},
+712:                                             {'id': 'mlr_medical', 'title': 'More Medical Colleges', 'description': 'Vidya, Sahayadri, Pragathy...'},
+713:                                             {'id': 'mlr_engineering', 'title': 'More Engineering Colleges', 'description': 'Srinivas, AJ, Sree Dhevi...'},
+714:                                         ]
+715:                                     }]
+716:                                 )
+717:                                 content = 'Mangalore college list sent'
+718: 
+719:                             else:
+720:                                 college_reply = COLLEGE_LISTS.get('Kerala')
+721:                                 _send_wa_message(phone, college_reply)
+722:                                 content = college_reply
+723: 
+724:                             Message.objects.create(
+725:                                 contact_id=str(contact.id),
+726:                                 content=content,
+727:                                 direction='outbound',
+728:                                 status='sent',
+729:                                 is_automated=True,
+730:                             )
+731:                             contact.message_count += 1
+732:                             contact.last_contacted_at = tz.now()
+733:                             contact.save()
+734:                             continue
+735: 
+736:                         # Handle category buttons for Bangalore and Mangalore
+737:                         category_map = {
+738:                             'blr_degree': 'Bangalore_Degree',
+739:                             'blr_medical': 'Bangalore_Medical',
+740:                             'blr_engineering': 'Bangalore_Engineering',
+741:                             'mlr_degree': 'Mangalore_Degree',
+742:                             'mlr_medical': 'Mangalore_Medical',
+743:                             'mlr_engineering': 'Mangalore_Engineering',
+744:                         }
+745:                         if selected_id in category_map:
+746:                             college_reply = COLLEGE_LISTS.get(category_map[selected_id])
+747:                             if college_reply:
+748:                                 _send_wa_message(phone, college_reply)
+749:                                 contact, _ = Contact.objects.get_or_create(
+750:                                     phone=phone,
+751:                                     defaults={'name': phone, 'source': 'WhatsApp'}
+752:                                 )
+753:                                 Message.objects.create(
+754:                                     contact_id=str(contact.id),
+755:                                     content=college_reply,
+756:                                     direction='outbound',
+757:                                     status='sent',
+758:                                     is_automated=True,
+759:                                 )
+760:                                 contact.message_count += 1
+761:                                 contact.last_contacted_at = tz.now()
+762:                                 contact.save()
+763:                             continue
+764:                     
+765:                     # Handle text messages
+766:                     text = msg.get('text', {}).get('body', '')
+767:                     if not phone or not text:
+768:                         continue
+769:                     contact, _ = Contact.objects.get_or_create(
+770:                         phone=phone,
+771:                         defaults={'name': phone, 'source': 'WhatsApp'}
+772:                     )
+773:                     Message.objects.create(
+774:                         contact_id=str(contact.id),
+775:                         content=text,
+776:                         direction='inbound',
+777:                         status='read',
+778:                         is_automated=False,
+779:                     )
+780:                     contact.reply_count += 1
+781:                     contact.last_reply_at = tz.now()
+782:                     contact.save()
+783:                     # Auto-reply with college list if button tapped
+784:                     college_reply = COLLEGE_LISTS.get(text.strip())
+785:                     if college_reply:
+786:                         _send_wa_message(phone, college_reply)
+787:                         Message.objects.create(
+788:                             contact_id=str(contact.id),
+789:                             content=college_reply,
+790:                             direction='outbound',
+791:                             status='sent',
+792:                             is_automated=True,
+793:                         )
+794:                         contact.message_count += 1
+795:                         contact.last_contacted_at = tz.now()
+796:                         contact.save()
+797:     except Exception:
+798:         pass
+799: 
+800:     return HttpResponse('OK', status=200)
+801: 
+802: 
+803: @csrf_exempt
+804: @require_http_methods(['POST'])
+805: def whatsapp_send(request):
+806:     data = json.loads(request.body)
+807:     contact_id = data.get('contactId')
+808:     message_text = data.get('message', '')
+809:     try:
+810:         contact = Contact.objects.get(id=contact_id)
+811:     except Contact.DoesNotExist:
+812:         return JsonResponse({'error': 'Contact not found'}, status=404)
+813: 
+814:     phone = contact.phone
+815:     if not phone.startswith('+'):
+816:         phone = '+' + phone
+817: 
+818:     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+819:     payload = {
+820:         'messaging_product': 'whatsapp',
+821:         'to': phone,
+822:         'type': 'text',
+823:         'text': {'body': message_text},
+824:     }
+825:     import logging
+826:     logger = logging.getLogger(__name__)
+827:     logger.error(f'Sending WA message to {phone}, token starts: {settings.WHATSAPP_TOKEN[:20]}')
+828:     
+829:     res = requests.post(url, json=payload, headers=_wa_headers())
+830:     result = res.json()
+831:     logger.error(f'WA API response: {result}')
+832: 
+833:     if result.get('messages'):
+834:         msg = Message.objects.create(
+835:             contact_id=contact_id, content=message_text,
+836:             direction='outbound', status='sent', is_automated=False,
+837:         )
+838:         contact.message_count += 1
+839:         contact.last_contacted_at = tz.now()
+840:         contact.save()
+841:         return JsonResponse({'success': True, 'message': serialize_message(msg)})
+842:     return JsonResponse({'error': result}, status=400)
+843: 
+844: 
+845: @csrf_exempt
+846: @require_http_methods(['GET'])
+847: def whatsapp_templates(request):
+848:     url = f'{GRAPH_URL}/{settings.WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates'
+849:     params = {'fields': 'name,status,category,language,components', 'limit': 100}
+850:     res = requests.get(url, headers=_wa_headers(), params=params)
+851:     return JsonResponse(res.json())
+852: 
+853: 
+854: @csrf_exempt
+855: @require_http_methods(['POST'])
+856: def whatsapp_send_template(request):
+857:     data = json.loads(request.body)
+858:     contact_id = data.get('contactId')
+859:     template_name = data.get('templateName', 'enlighted_admission_enquiry')
+860:     lang = data.get('lang', 'en')
+861:     try:
+862:         contact = Contact.objects.get(id=contact_id)
+863:     except Contact.DoesNotExist:
+864:         return JsonResponse({'error': 'Contact not found'}, status=404)
+865: 
+866:     phone = contact.phone
+867:     if not phone.startswith('+'):
+868:         phone = '+' + phone
+869: 
+870:     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
+871:     payload = {
+872:         'messaging_product': 'whatsapp',
+873:         'to': phone,
+874:         'type': 'template',
+875:         'template': {'name': template_name, 'language': {'code': lang}},
+876:     }
+877:     res = requests.post(url, json=payload, headers=_wa_headers())
+878:     result = res.json()
+879: 
+880:     if result.get('messages'):
+881:         msg = Message.objects.create(
+882:             contact_id=contact_id,
+883:             content=f'[Template: {template_name}]',
+884:             direction='outbound', status='sent', is_automated=False,
+885:         )
+886:         contact.message_count += 1
+887:         contact.last_contacted_at = tz.now()
+888:         contact.save()
+889:         return JsonResponse({'success': True, 'message': serialize_message(msg)})
+890:     return JsonResponse({'error': result}, status=400)
+891: 
+892: 
+893: @csrf_exempt
+894: @require_http_methods(['POST'])
+895: def whatsapp_bulk_send(request):
+896:     data = json.loads(request.body)
+897:     message_text = data.get('message', '')
+898:     tag = data.get('tag')
+899:     contact_ids = data.get('contactIds', [])
+900: 
+901:     if contact_ids:
+902:         contacts = Contact.objects.filter(id__in=contact_ids)
+903:     elif tag:
+904:         contacts = Contact.objects.filter(tags__contains=[tag])
+905:     else:
+906:         contacts = Contact.objects.all()
+907: 
+908:     results = []
+909:     for contact in contacts:
+910:         result = _send_wa_message(contact.phone, message_text)
+911:         if result.get('messages'):
+912:             Message.objects.create(
+913:                 contact_id=str(contact.id), content=message_text,
+914:                 direction='outbound', status='sent', is_automated=True,
+915:             )
+916:             contact.message_count += 1
+917:             contact.last_contacted_at = tz.now()
+918:             contact.save()
+919:         results.append({'phone': contact.phone, 'name': contact.name, 'success': bool(result.get('messages'))})
+920: 
+921:     return JsonResponse({'results': results, 'total': len(results)})
