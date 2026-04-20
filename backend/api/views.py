@@ -456,7 +456,7 @@ def _send_wa_interactive_buttons(to, body_text, buttons):
 
 
 COLLEGE_LISTS = {
-    'Bangalore': '''🎓 *BANGALORE COLLEGE LIST*
+    'Bangalore': '🎓 *BANGALORE COLLEGE LIST*
 
 1️⃣ SRI VINAYA GROUP | FLORENCE GROUP
 2️⃣ SRI SIDDHARTHA COLLEGE | JUPITER GROUP
@@ -467,11 +467,77 @@ COLLEGE_LISTS = {
 7️⃣ KOSHYS GROUP | MATHRUSHREE COLLEGE
 8️⃣ BRINDAVAN GROUP | CHRIST UNIVERSITY
 9️⃣ JAIN UNIVERSITY | REVA UNIVERSITY
-🔟 PRESIDENCY UNIVERSITY | GARDEN CITY UNIVERSITY
+🔟 PRESIDENCY UNIVERSITY | GARDEN CITY UNIVERSITY',
+
+    'Bangalore_Degree': '🎓 *DEGREE COLLEGES - BANGALORE*
+
+1️⃣ CHRIST COLLEGE
+2️⃣ ALLIANCE COLLEGE
+3️⃣ PRESIDENCY COLLEGE
+4️⃣ REVA COLLEGE
+5️⃣ BGS AND SJB COLLEGE
+6️⃣ SAPTHAGIRI COLLEGE
+7️⃣ EAST POINT COLLEGE
+8️⃣ ACHARYA COLLEGE
+9️⃣ KOSHYS GROUP OF INSTITUTION
+🔟 YENEPOYA UNIVERSITY
+1️⃣1️⃣ HILLSIDE COLLEGE
+1️⃣2️⃣ BRINDAVAN COLLEGE
+1️⃣3️⃣ RR COLLEGE
+1️⃣4️⃣ ABBS COLLEGE
+1️⃣5️⃣ HKBK COLLEGE
+1️⃣6️⃣ SEA COLLEGE
+1️⃣7️⃣ PADMASHREE COLLEGE
 
 📞 *Contact us for admissions!*
-💬 Reply with course name for details''',
-    'Manglore': '''🎓 *MANGALORE COLLEGE LIST*
+💬 Reply with course name for details',
+
+    'Bangalore_Engineering': '⚙️ *ENGINEERING COLLEGES - BANGALORE*
+
+1️⃣ ALLIANCE COLLEGE
+2️⃣ PRESIDENCY COLLEGE
+3️⃣ REVA COLLEGE
+4️⃣ BGS AND SJB COLLEGE
+5️⃣ SAPTHAGIRI COLLEGE
+6️⃣ EAST POINT COLLEGE
+7️⃣ OXFORD COLLEGE
+8️⃣ S-VYASA COLLEGE
+9️⃣ ACHARYA COLLEGE
+🔟 YENEPOYA UNIVERSITY
+1️⃣1️⃣ BRINDAVAN COLLEGE
+1️⃣2️⃣ RR COLLEGE
+1️⃣3️⃣ HKBK COLLEGE
+1️⃣4️⃣ SEA COLLEGE
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details',
+
+    'Bangalore_Medical': '🏥 *MEDICAL COLLEGES - BANGALORE*
+
+1️⃣ PES COLLEGE
+2️⃣ CHRISTIAN COLLEGE
+3️⃣ BGS AND SJB COLLEGE
+4️⃣ EAST POINT COLLEGE
+5️⃣ ACHARYA COLLEGE
+6️⃣ YENEPOYA UNIVERSITY
+7️⃣ HILLSIDE COLLEGE
+8️⃣ RR COLLEGE
+9️⃣ SEA COLLEGE
+🔟 SRI SIDDHARTHA COLLEGE
+1️⃣1️⃣ PADMASHREE COLLEGE
+1️⃣2️⃣ JUPITER COLLEGE
+1️⃣3️⃣ SURYA COLLEGE
+1️⃣4️⃣ NALAPAD COLLEGE OF NURSING
+1️⃣5️⃣ ABHAYA COLLEGE
+1️⃣6️⃣ HEARTLAND COLLEGE
+1️⃣7️⃣ NAVANEETHAM COLLEGE
+1️⃣8️⃣ FLORENCE COLLEGE
+1️⃣9️⃣ SMT LAKSHMIDEVI COLLEGE
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details',
+
+    'Mangalore': '🎓 *MANGALORE COLLEGE LIST*
 
 1️⃣ SRINIVAS UNIVERSITY
 2️⃣ YENEPOYA UNIVERSITY
@@ -482,11 +548,48 @@ COLLEGE_LISTS = {
 7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
 8️⃣ ALIYAH COLLEGE OF NURSING
 9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
-🔟 SHREE DEVI EDUCATION TRUST
+🔟 SHREE DEVI EDUCATION TRUST',
+
+    'Mangalore_Degree': '🎓 *DEGREE COLLEGES - MANGALORE*
+
+1️⃣ YENEPOYA COLLEGE
+2️⃣ SRINIVAS COLLEGE
+3️⃣ SRIDEVI COLLEGE
+4️⃣ ALOYSIUS COLLEGE
+5️⃣ P.A COLLEGE
+6️⃣ AGNES COLLEGE
 
 📞 *Contact us for admissions!*
-💬 Reply with course name for details''',
-    'Mangalore': '''🎓 *MANGALORE COLLEGE LIST*
+💬 Reply with course name for details',
+
+    'Mangalore_Engineering': '⚙️ *ENGINEERING COLLEGES - MANGALORE*
+
+1️⃣ SRINIVAS COLLEGE
+2️⃣ YENEPOYA COLLEGE
+3️⃣ AJ COLLEGE OF ENGINEERING
+4️⃣ SREE DHEVI COLLEGE
+5️⃣ P.A COLLEGE
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details',
+
+    'Mangalore_Medical': '🏥 *MEDICAL COLLEGES - MANGALORE*
+
+1️⃣ YENEPOYA COLLEGE
+2️⃣ INDIANA MEDICAL COLLEGE
+3️⃣ ALIYAH COLLEGE OF NURSING
+4️⃣ UNITY MEDICAL COLLEGE
+5️⃣ SRINIVAS COLLEGE
+6️⃣ VIDYA COLLEGE OF NURSING
+7️⃣ SAHAYADRI COLLEGE OF NURSING
+8️⃣ PRAGATHY COLLEGE OF NURSING
+9️⃣ CITY COLLEGE OF NURSING
+🔟 ATHENA GROUP OF INSTITUTION
+
+📞 *Contact us for admissions!*
+💬 Reply with course name for details',
+
+    'Manglore': '🎓 *MANGALORE COLLEGE LIST*
 
 1️⃣ SRINIVAS UNIVERSITY
 2️⃣ YENEPOYA UNIVERSITY
@@ -497,30 +600,21 @@ COLLEGE_LISTS = {
 7️⃣ K. PANDIRAJA BALLAL NURSING INSTITUTE
 8️⃣ ALIYAH COLLEGE OF NURSING
 9️⃣ NITTE INSTITUTE OF HOSPITALITY SERVICE
-🔟 SHREE DEVI EDUCATION TRUST
+🔟 SHREE DEVI EDUCATION TRUST',
 
-📞 *Contact us for admissions!*
-💬 Reply with course name for details''',
-    'Kerala': '''🎓 *KERALA COLLEGE LIST*
+    'Kerala': '🎓 *KERALA COLLEGE LIST*
 
 1️⃣ KMM (KOCHI)
-
 2️⃣ AL AZHAR (IDUKKI)
-
 3️⃣ METS (CALICUT)
-
 4️⃣ MES (KOCHI)
-
 5️⃣ ELIMS (THRISSUR)
-
 6️⃣ JAIN (KOCHI)
-
 7️⃣ INDIRA GANDHI
-
 8️⃣ YMBC (KOCHI)
 
 📞 *Contact us for admissions!*
-💬 Reply with course name for details''',
+💬 Reply with course name for details',
 }
 
 
@@ -557,6 +651,47 @@ def whatsapp_webhook(request):
                         if selected_id in ['bangalore', 'mangalore', 'kerala']:
                             city_name = selected_id.title()
                             college_reply = COLLEGE_LISTS.get(city_name)
+                            if college_reply:
+                                contact, _ = Contact.objects.get_or_create(
+                                    phone=phone,
+                                    defaults={'name': phone, 'source': 'WhatsApp'}
+                                )
+                                if selected_id in ['bangalore', 'mangalore']:
+                                    prefix = 'blr' if selected_id == 'bangalore' else 'mlr'
+                                    _send_wa_interactive_buttons(
+                                        phone,
+                                        college_reply,
+                                        [
+                                            {'type': 'reply', 'reply': {'id': f'{prefix}_degree', 'title': 'More Degree Colleges'}},
+                                            {'type': 'reply', 'reply': {'id': f'{prefix}_medical', 'title': 'More Medical Colleges'}},
+                                            {'type': 'reply', 'reply': {'id': f'{prefix}_engineering', 'title': 'More Engineering'}},
+                                        ]
+                                    )
+                                else:
+                                    _send_wa_message(phone, college_reply)
+                                Message.objects.create(
+                                    contact_id=str(contact.id),
+                                    content=college_reply,
+                                    direction='outbound',
+                                    status='sent',
+                                    is_automated=True,
+                                )
+                                contact.message_count += 1
+                                contact.last_contacted_at = tz.now()
+                                contact.save()
+                            continue
+
+                        # Handle category buttons for Bangalore and Mangalore
+                        category_map = {
+                            'blr_degree': 'Bangalore_Degree',
+                            'blr_medical': 'Bangalore_Medical',
+                            'blr_engineering': 'Bangalore_Engineering',
+                            'mlr_degree': 'Mangalore_Degree',
+                            'mlr_medical': 'Mangalore_Medical',
+                            'mlr_engineering': 'Mangalore_Engineering',
+                        }
+                        if selected_id in category_map:
+                            college_reply = COLLEGE_LISTS.get(category_map[selected_id])
                             if college_reply:
                                 _send_wa_message(phone, college_reply)
                                 contact, _ = Contact.objects.get_or_create(
