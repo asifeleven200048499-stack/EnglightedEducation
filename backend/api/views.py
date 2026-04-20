@@ -436,8 +436,7 @@ def _send_wa_message(to, text):
     return res.json()
 
 
-def _send_wa_interactive_buttons(to, body_text, buttons):
-    # Ensure number has + prefix
+def _send_wa_interactive_list(to, body_text, button_text, sections):
     if not to.startswith('+'):
         to = '+' + to
     url = f'{GRAPH_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages'
@@ -446,9 +445,12 @@ def _send_wa_interactive_buttons(to, body_text, buttons):
         'to': to,
         'type': 'interactive',
         'interactive': {
-            'type': 'button',
+            'type': 'list',
             'body': {'text': body_text},
-            'action': {'buttons': buttons}
+            'action': {
+                'button': button_text,
+                'sections': sections
+            }
         }
     }
     res = requests.post(url, json=payload, headers=_wa_headers())
@@ -650,35 +652,86 @@ def whatsapp_webhook(request):
                         
                         if selected_id in ['bangalore', 'mangalore', 'kerala']:
                             city_name = selected_id.title()
-                            college_reply = COLLEGE_LISTS.get(city_name)
-                            if college_reply:
-                                contact, _ = Contact.objects.get_or_create(
-                                    phone=phone,
-                                    defaults={'name': phone, 'source': 'WhatsApp'}
-                                )
-                                if selected_id in ['bangalore', 'mangalore']:
-                                    prefix = 'blr' if selected_id == 'bangalore' else 'mlr'
-                                    _send_wa_interactive_buttons(
-                                        phone,
-                                        college_reply,
-                                        [
-                                            {'type': 'reply', 'reply': {'id': f'{prefix}_degree', 'title': 'More Degree Colleges'}},
-                                            {'type': 'reply', 'reply': {'id': f'{prefix}_medical', 'title': 'More Medical Colleges'}},
-                                            {'type': 'reply', 'reply': {'id': f'{prefix}_engineering', 'title': 'More Engineering'}},
+                            contact, _ = Contact.objects.get_or_create(
+                                phone=phone,
+                                defaults={'name': phone, 'source': 'WhatsApp'}
+                            )
+
+                            if selected_id == 'bangalore':
+                                _send_wa_interactive_list(
+                                    phone,
+                                    '🎓 *BANGALORE COLLEGE LIST*
+
+Here are our top colleges in Bangalore. Select below to explore more:',
+                                    'View Bangalore List',
+                                    [{
+                                        'title': 'Top Colleges',
+                                        'rows': [
+                                            {'id': 'blr_c1', 'title': 'PES University', 'description': 'Top ranked university'},
+                                            {'id': 'blr_c2', 'title': 'Christ University', 'description': 'Premier institution'},
+                                            {'id': 'blr_c3', 'title': 'Alliance University', 'description': 'Management & Engineering'},
+                                            {'id': 'blr_c4', 'title': 'Presidency University', 'description': 'Multi-discipline university'},
+                                            {'id': 'blr_c5', 'title': 'REVA University', 'description': 'Engineering & Sciences'},
+                                            {'id': 'blr_c6', 'title': 'BGS & SJB Group', 'description': 'Group of institutions'},
+                                            {'id': 'blr_c7', 'title': 'Sapthagiri NPS University', 'description': 'Medical & Engineering'},
                                         ]
-                                    )
-                                else:
-                                    _send_wa_message(phone, college_reply)
-                                Message.objects.create(
-                                    contact_id=str(contact.id),
-                                    content=college_reply,
-                                    direction='outbound',
-                                    status='sent',
-                                    is_automated=True,
+                                    },
+                                    {
+                                        'title': 'More Colleges',
+                                        'rows': [
+                                            {'id': 'blr_degree', 'title': 'More Degree Colleges', 'description': 'View all degree colleges'},
+                                            {'id': 'blr_medical', 'title': 'More Medical Colleges', 'description': 'View all medical colleges'},
+                                            {'id': 'blr_engineering', 'title': 'More Engineering Colleges', 'description': 'View all engineering colleges'},
+                                        ]
+                                    }]
                                 )
-                                contact.message_count += 1
-                                contact.last_contacted_at = tz.now()
-                                contact.save()
+                                content = 'Bangalore college list sent'
+
+                            elif selected_id == 'mangalore':
+                                _send_wa_interactive_list(
+                                    phone,
+                                    '🎓 *MANGALORE COLLEGE LIST*
+
+Here are our top colleges in Mangalore. Select below to explore more:',
+                                    'View Mangalore List',
+                                    [{
+                                        'title': 'Top Colleges',
+                                        'rows': [
+                                            {'id': 'mlr_c1', 'title': 'Yenepoya University', 'description': 'Medical & Sciences'},
+                                            {'id': 'mlr_c2', 'title': 'Srinivas University', 'description': 'Top ranked university'},
+                                            {'id': 'mlr_c3', 'title': 'Indiana Medical College', 'description': 'Medical institution'},
+                                            {'id': 'mlr_c4', 'title': 'AJ College of Engineering', 'description': 'Engineering college'},
+                                            {'id': 'mlr_c5', 'title': 'Aliyah College of Nursing', 'description': 'Nursing college'},
+                                            {'id': 'mlr_c6', 'title': 'Unity Medical College', 'description': 'Medical college'},
+                                            {'id': 'mlr_c7', 'title': 'Sridevi College', 'description': 'Degree & Sciences'},
+                                        ]
+                                    },
+                                    {
+                                        'title': 'More Colleges',
+                                        'rows': [
+                                            {'id': 'mlr_degree', 'title': 'More Degree Colleges', 'description': 'Yenepoya, Srinivas, Aloysius...'},
+                                            {'id': 'mlr_medical', 'title': 'More Medical Colleges', 'description': 'Vidya, Sahayadri, Pragathy...'},
+                                            {'id': 'mlr_engineering', 'title': 'More Engineering Colleges', 'description': 'Srinivas, AJ, Sree Dhevi...'},
+                                        ]
+                                    }]
+                                )
+                                content = 'Mangalore college list sent'
+
+                            else:
+                                college_reply = COLLEGE_LISTS.get('Kerala')
+                                _send_wa_message(phone, college_reply)
+                                content = college_reply
+
+                            Message.objects.create(
+                                contact_id=str(contact.id),
+                                content=content,
+                                direction='outbound',
+                                status='sent',
+                                is_automated=True,
+                            )
+                            contact.message_count += 1
+                            contact.last_contacted_at = tz.now()
+                            contact.save()
                             continue
 
                         # Handle category buttons for Bangalore and Mangalore
