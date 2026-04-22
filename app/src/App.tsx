@@ -14,6 +14,9 @@ import {
   Upload,
   Send,
   PlusSquare,
+  Info,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,12 +32,14 @@ import { TasksView, TaskModal } from '@/components/views/TasksView';
 import { AnalyticsView } from '@/components/views/AnalyticsView';
 import { CallerManagementView } from '@/components/views/CallerManagementView';
 import { CallerDashboard } from '@/components/views/CallerDashboard';
+import { AboutView } from '@/components/views/AboutView';
 import { getInitials } from '@/lib/utils';
 import type { Contact } from '@/types';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<LoginUser | null>(null);
   const [activeView, setActiveView] = useState('dashboard');
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
@@ -77,6 +82,13 @@ function App() {
     { id: 'callers', label: 'Callers', icon: Users },
   ];
 
+  const aboutItems = [
+    { id: 'who-we-are', label: 'Who We Are' },
+    { id: 'what-we-do', label: 'What We Do' },
+    { id: 'whom-we-serve', label: 'Whom We Serve' },
+    { id: 'where-we-serve', label: 'Where We Serve' },
+  ];
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -95,6 +107,11 @@ function App() {
         return <AnalyticsView stats={stats} store={store} />;
       case 'callers':
         return <CallerManagementView />;
+      case 'who-we-are':
+      case 'what-we-do':
+      case 'whom-we-serve':
+      case 'where-we-serve':
+        return <AboutView section={activeView} />;
       default:
         return <DashboardView stats={stats} store={store} setActiveView={setActiveView} />;
     }
@@ -152,6 +169,43 @@ function App() {
               </button>
             );
           })}
+
+          {/* About Us dropdown */}
+          <div>
+            <button
+              onClick={() => setAboutOpen(!aboutOpen)}
+              className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-colors ${
+                aboutItems.some((a) => a.id === activeView)
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Info className="w-5 h-5 flex-shrink-0" />
+              {sidebarOpen && (
+                <>
+                  <span className="ml-3 flex-1 text-left">About Us</span>
+                  {aboutOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </>
+              )}
+            </button>
+            {aboutOpen && sidebarOpen && (
+              <div className="ml-8 mt-1 space-y-1">
+                {aboutItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeView === item.id
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Quick Actions */}
