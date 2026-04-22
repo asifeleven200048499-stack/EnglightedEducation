@@ -20,7 +20,7 @@ interface LoginViewProps {
   onLogin: (user: LoginUser) => void;
 }
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://enlightedleads.onrender.com/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://englightededu.onrender.com/api';
 
 export function LoginView({ onLogin }: LoginViewProps) {
   const [username, setUsername] = useState('');
