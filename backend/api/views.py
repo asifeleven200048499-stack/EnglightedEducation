@@ -382,14 +382,46 @@ def caller_detail(request, caller_id):
 @csrf_exempt
 @require_http_methods(['POST'])
 def caller_login(request):
+    import secrets
     data = json.loads(request.body)
     username = data.get('username', '').strip()
     password = data.get('password', '')
     try:
         caller = Caller.objects.get(username=username, password=password, is_active=True)
-        return JsonResponse({'success': True, 'caller': serialize_caller(caller)})
+        if caller.session_token:
+            return JsonResponse({'error': 'This account is already logged in on another device.'}, status=403)
+        caller.session_token = secrets.token_hex(32)
+        caller.save(update_fields=['session_token'])
+        result = serialize_caller(caller)
+        result['sessionToken'] = caller.session_token
+        return JsonResponse({'success': True, 'caller': result})
     except Caller.DoesNotExist:
         return JsonResponse({'error': 'Invalid credentials or account disabled'}, status=401)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def caller_logout(request):
+    data = json.loads(request.body)
+    caller_id = data.get('callerId', '')
+    token = data.get('sessionToken', '')
+    try:
+        caller = Caller.objects.get(id=caller_id, session_token=token)
+        caller.session_token = ''
+        caller.save(update_fields=['session_token'])
+    except Caller.DoesNotExist:
+        pass
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def caller_verify(request):
+    data = json.loads(request.body)
+    caller_id = data.get('callerId', '')
+    token = data.get('sessionToken', '')
+    valid = Caller.objects.filter(id=caller_id, session_token=token, is_active=True).exists()
+    return JsonResponse({'valid': valid})
 
 
 @csrf_exempt

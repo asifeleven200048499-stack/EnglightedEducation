@@ -14,7 +14,7 @@ const ADMINS = [
 
 export type LoginUser =
   | { type: 'admin'; name: string; role: string }
-  | { type: 'caller'; id: string; name: string; username: string; assignedSchools: string[]; assignedCourses: string[] };
+  | { type: 'caller'; id: string; name: string; username: string; sessionToken: string; assignedSchools: string[]; assignedCourses: string[] };
 
 interface LoginViewProps {
   onLogin: (user: LoginUser) => void;
@@ -56,9 +56,12 @@ export function LoginView({ onLogin }: LoginViewProps) {
           id: data.caller.id,
           name: data.caller.name,
           username: data.caller.username,
+          sessionToken: data.caller.sessionToken,
           assignedSchools: data.caller.assignedSchools,
           assignedCourses: data.caller.assignedCourses,
         });
+      } else if (res.status === 403) {
+        setError('This account is already logged in on another device.');
       } else {
         setError('Invalid username or password.');
       }

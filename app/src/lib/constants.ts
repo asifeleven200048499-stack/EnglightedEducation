@@ -55,7 +55,6 @@ export const LEAD_STATUSES: { value: LeadStatus; label: string; description: str
   { value: 'new', label: 'New', description: 'Just added, no contact yet' },
   { value: 'contacted', label: 'Contacted', description: 'Initial contact made' },
   { value: 'interested', label: 'Interested', description: 'Shown interest in courses' },
-  { value: 'qualified', label: 'Qualified', description: 'Meets criteria, high potential' },
   { value: 'converted', label: 'Converted', description: 'Successfully enrolled' },
   { value: 'lost', label: 'Lost', description: 'Not interested or unreachable' }
 ];
@@ -249,7 +248,7 @@ export const QUICK_ACTIONS = [
 
 // Filter presets
 export const FILTER_PRESETS = [
-  { id: 'hot-leads', label: 'Hot Leads', filter: { tags: ['hot'], status: ['interested', 'qualified'] } },
+  { id: 'hot-leads', label: 'Hot Leads', filter: { tags: ['hot'], status: ['interested'] } },
   { id: 'needs-follow-up', label: 'Needs Follow-up', filter: { tags: ['follow-up'] } },
   { id: 'new-today', label: 'New Today', filter: {} },
   { id: 'no-reply-7d', label: 'No Reply (7 days)', filter: { lastContactedDays: 7 } },

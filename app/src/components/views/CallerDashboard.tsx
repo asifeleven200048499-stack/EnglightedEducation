@@ -30,6 +30,34 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
       .catch(() => setLoading(false));
   }, [user.id]);
 
+  // Verify session every 30s — kicks out if another device logged in
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/callers/verify/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callerId: user.id, sessionToken: user.sessionToken }),
+        });
+        const data = await res.json();
+        if (!data.valid) onLogout();
+      } catch {}
+    };
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [user.id, user.sessionToken, onLogout]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${BASE_URL}/callers/logout/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callerId: user.id, sessionToken: user.sessionToken }),
+      });
+    } catch {}
+    onLogout();
+  };
+
   const updateStatus = async (contactId: string, status: string) => {
     await fetch(`${BASE_URL}/contacts/${contactId}/`, {
       method: 'PUT',
@@ -65,7 +93,7 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
             <p className="text-xs text-slate-500">{user.name}</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onLogout}>
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>

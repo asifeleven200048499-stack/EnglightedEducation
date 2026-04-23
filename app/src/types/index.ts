@@ -3,7 +3,7 @@
 // ============================================
 
 // Lead Status
-export type LeadStatus = 'new' | 'contacted' | 'interested' | 'qualified' | 'converted' | 'lost';
+export type LeadStatus = 'new' | 'contacted' | 'interested' | 'converted' | 'lost';
 
 // Contact Tags
 export type ContactTag = 'hot' | 'warm' | 'cold' | 'interested' | 'not-interested' | 'follow-up' | 'vip' | 'do-not-disturb';
