@@ -66,13 +66,13 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
   const handleCall = async (contact: any) => {
     const callCount = (contact.customFields?.callCount || 0) + 1;
     const updatedFields = { ...contact.customFields, callCount };
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, customFields: updatedFields } : c));
     await fetch(`${BASE_URL}/contacts/${contact.id}/`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ customFields: updatedFields }),
     });
-    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, customFields: updatedFields } : c));
-    window.location.href = `tel:${contact.phone}`;
+    setTimeout(() => { window.location.href = `tel:${contact.phone}`; }, 300);
   };
 
   const openForm = (contact: any) => {
@@ -261,7 +261,12 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
                       onClick={() => handleCall(contact)}
                     >
                       <Phone className="w-4 h-4 mr-2" />
-                      Call {contact.customFields?.callCount ? `(${contact.customFields.callCount})` : ''}
+                      Call
+                      {contact.customFields?.callCount > 0 && (
+                        <span className="ml-2 bg-emerald-800 text-white text-xs rounded-full px-1.5 py-0.5">
+                          {contact.customFields.callCount}
+                        </span>
+                      )}
                     </Button>
                     <Button
                       size="sm"
