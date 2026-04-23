@@ -10,7 +10,6 @@ class Caller(models.Model):
     assigned_schools = models.JSONField(default=list)
     assigned_courses = models.JSONField(default=list)
     is_active = models.BooleanField(default=True)
-    session_token = models.CharField(max_length=64, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

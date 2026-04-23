@@ -382,7 +382,6 @@ def caller_detail(request, caller_id):
 @csrf_exempt
 @require_http_methods(['POST'])
 def caller_login(request):
-    import secrets
     data = json.loads(request.body)
     username = data.get('username', '').strip()
     password = data.get('password', '')
