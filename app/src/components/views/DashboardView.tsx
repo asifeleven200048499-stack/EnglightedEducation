@@ -48,7 +48,6 @@ export function DashboardView({ stats, store, setActiveView }: DashboardViewProp
     { name: 'New', value: stats.pipelineDistribution.new, color: CHART_COLORS.secondary },
     { name: 'Contacted', value: stats.pipelineDistribution.contacted, color: CHART_COLORS.accent },
     { name: 'Interested', value: stats.pipelineDistribution.interested, color: CHART_COLORS.primary },
-    { name: 'Qualified', value: stats.pipelineDistribution.qualified, color: CHART_COLORS.purple },
     { name: 'Converted', value: stats.pipelineDistribution.converted, color: '#22c55e' },
     { name: 'Lost', value: stats.pipelineDistribution.lost, color: CHART_COLORS.slate },
   ];

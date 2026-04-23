@@ -338,12 +338,12 @@ export function useStore() {
 
   const getDashboardStats = useCallback((): DashboardStats => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const pipelineDistribution: Record<LeadStatus, number> = { new: 0, contacted: 0, interested: 0, qualified: 0, converted: 0, lost: 0 };
+    const pipelineDistribution: Record<LeadStatus, number> = { new: 0, contacted: 0, interested: 0, converted: 0, lost: 0 };
     contacts.forEach(c => pipelineDistribution[c.status]++);
     return {
       totalContacts: totalContacts,
       newContactsToday: contacts.filter(c => c.createdAt >= today).length,
-      activeLeads: contacts.filter(c => ['interested', 'qualified'].includes(c.status)).length,
+      activeLeads: contacts.filter(c => c.status === 'interested').length,
       conversionRate: contacts.length > 0 ? Math.round((contacts.filter(c => c.status === 'converted').length / contacts.length) * 100) : 0,
       messagesSentToday: 0,
       messagesReceivedToday: 0,
@@ -371,7 +371,6 @@ export function useStore() {
   const calculateLeadScore = useCallback((contact: Contact): number => {
     let score = 50;
     if (contact.status === 'converted') score += 30;
-    else if (contact.status === 'qualified') score += 25;
     else if (contact.status === 'interested') score += 20;
     else if (contact.status === 'lost') score -= 20;
     if (contact.replyCount > 10) score += 15;

@@ -74,7 +74,6 @@ export function AnalyticsView({ stats, store }: AnalyticsViewProps) {
     { name: 'New', value: 100, percentage: 100 },
     { name: 'Contacted', value: 75, percentage: 75 },
     { name: 'Interested', value: 45, percentage: 45 },
-    { name: 'Qualified', value: 25, percentage: 25 },
     { name: 'Converted', value: 15, percentage: 15 },
   ];
 
@@ -214,7 +213,6 @@ export function AnalyticsView({ stats, store }: AnalyticsViewProps) {
                       { name: 'New', value: stats.pipelineDistribution.new },
                       { name: 'Contacted', value: stats.pipelineDistribution.contacted },
                       { name: 'Interested', value: stats.pipelineDistribution.interested },
-                      { name: 'Qualified', value: stats.pipelineDistribution.qualified },
                       { name: 'Converted', value: stats.pipelineDistribution.converted },
                       { name: 'Lost', value: stats.pipelineDistribution.lost },
                     ]} layout="vertical">
