@@ -22,7 +22,6 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [loggedOut, setLoggedOut] = useState(false);
 
   useEffect(() => {
     fetch(`${BASE_URL}/callers/${user.id}/contacts/`)
@@ -31,27 +30,7 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
       .catch(() => setLoading(false));
   }, [user.id]);
 
-  // Verify session every 30s — kicks out if another device logged in
-  useEffect(() => {
-    if (loggedOut) return;
-    const check = async () => {
-      if (loggedOut) return;
-      try {
-        const res = await fetch(`${BASE_URL}/callers/verify/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callerId: user.id, sessionToken: user.sessionToken }),
-        });
-        const data = await res.json();
-        if (!data.valid && !loggedOut) onLogout();
-      } catch {}
-    };
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, [user.id, user.sessionToken, onLogout, loggedOut]);
-
   const handleLogout = async () => {
-    setLoggedOut(true);
     try {
       await fetch(`${BASE_URL}/callers/logout/`, {
         method: 'POST',
