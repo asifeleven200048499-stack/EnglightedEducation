@@ -14,8 +14,6 @@ urlpatterns = [
     path('messages/<str:contact_id>/', views.messages_list),
     path('callers/', views.callers_list),
     path('callers/login/', views.caller_login),
-    path('callers/logout/', views.caller_logout),
-    path('callers/verify/', views.caller_verify),
     path('callers/<str:caller_id>/', views.caller_detail),
     path('callers/<str:caller_id>/contacts/', views.caller_contacts),
     path('whatsapp/webhook/', views.whatsapp_webhook),

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Phone, MessageSquare, Search, LogOut, Users, CheckCircle2, Clock } from 'lucide-react';
+import { Phone, MessageSquare, Search, LogOut, Users, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { getInitials, getAvatarColor, getStatusColor, formatPhone, generateWhatsAppLink } from '@/lib/utils';
 import { LEAD_STATUSES } from '@/lib/constants';
 import type { LoginUser } from './LoginView';
@@ -22,6 +25,9 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [formContact, setFormContact] = useState<any | null>(null);
+  const [formData, setFormData] = useState({ name: '', address: '', interestedPlace: '', interestedColleges: '', interestedCourses: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch(`${BASE_URL}/callers/${user.id}/contacts/`)
@@ -30,15 +36,40 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
       .catch(() => setLoading(false));
   }, [user.id]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch(`${BASE_URL}/callers/logout/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callerId: user.id }),
-      });
-    } catch {}
-    onLogout();
+  const handleLogout = () => onLogout();
+
+  const openForm = (contact: any) => {
+    setFormContact(contact);
+    setFormData({
+      name: contact.name || '',
+      address: contact.customFields?.address || '',
+      interestedPlace: contact.customFields?.interestedPlace || '',
+      interestedColleges: contact.customFields?.interestedColleges || '',
+      interestedCourses: contact.customFields?.interestedCourses || '',
+    });
+  };
+
+  const saveForm = async () => {
+    if (!formContact) return;
+    setSaving(true);
+    const updatedFields = {
+      ...formContact.customFields,
+      address: formData.address,
+      interestedPlace: formData.interestedPlace,
+      interestedColleges: formData.interestedColleges,
+      interestedCourses: formData.interestedCourses,
+    };
+    await fetch(`${BASE_URL}/contacts/${formContact.id}/`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: formData.name, customFields: updatedFields }),
+    });
+    setContacts(prev => prev.map(c => c.id === formContact.id
+      ? { ...c, name: formData.name, customFields: updatedFields }
+      : c
+    ));
+    setSaving(false);
+    setFormContact(null);
   };
 
   const updateTag = async (contactId: string, tag: string) => {
@@ -195,6 +226,13 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
                       <MessageSquare className="w-4 h-4 mr-2" />
                       WhatsApp
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openForm(contact)}
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -202,6 +240,43 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
           </div>
         )}
       </main>
+
+      {/* Student Form Modal */}
+      <Dialog open={!!formContact} onOpenChange={() => setFormContact(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Student Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Name</Label>
+              <Input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="Student name" />
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input value={formData.address} onChange={e => setFormData(p => ({ ...p, address: e.target.value }))} placeholder="Home address" />
+            </div>
+            <div>
+              <Label>Interested Place</Label>
+              <Input value={formData.interestedPlace} onChange={e => setFormData(p => ({ ...p, interestedPlace: e.target.value }))} placeholder="e.g. Bangalore, Mangalore" />
+            </div>
+            <div>
+              <Label>Interested Colleges</Label>
+              <Textarea value={formData.interestedColleges} onChange={e => setFormData(p => ({ ...p, interestedColleges: e.target.value }))} placeholder="e.g. Christ University, REVA" rows={2} />
+            </div>
+            <div>
+              <Label>Interested Courses</Label>
+              <Textarea value={formData.interestedCourses} onChange={e => setFormData(p => ({ ...p, interestedCourses: e.target.value }))} placeholder="e.g. B.Tech, MBBS" rows={2} />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button onClick={saveForm} disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Button variant="outline" onClick={() => setFormContact(null)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
