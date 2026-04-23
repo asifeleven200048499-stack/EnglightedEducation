@@ -404,9 +404,8 @@ def caller_login(request):
 def caller_logout(request):
     data = json.loads(request.body)
     caller_id = data.get('callerId', '')
-    token = data.get('sessionToken', '')
     try:
-        caller = Caller.objects.get(id=caller_id, session_token=token)
+        caller = Caller.objects.get(id=caller_id)
         caller.session_token = ''
         caller.save(update_fields=['session_token'])
     except Caller.DoesNotExist:
