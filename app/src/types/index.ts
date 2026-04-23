@@ -6,7 +6,7 @@
 export type LeadStatus = 'new' | 'contacted' | 'interested' | 'converted' | 'lost';
 
 // Contact Tags
-export type ContactTag = 'hot' | 'warm' | 'cold' | 'interested' | 'not-interested' | 'follow-up' | 'vip' | 'do-not-disturb';
+export type ContactTag = 'hot' | 'warm' | 'cold' | 'interested' | 'not-interested' | 'call-later' | 'follow-up' | 'vip' | 'do-not-disturb';
 
 // Message Status
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';

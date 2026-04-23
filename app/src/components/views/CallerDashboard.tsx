@@ -58,13 +58,23 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
     onLogout();
   };
 
-  const updateStatus = async (contactId: string, status: string) => {
+  const updateTag = async (contactId: string, tag: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    if (!contact) return;
+    const callerTags = ['interested', 'not-interested', 'call-later'];
+    const otherTags = (contact.tags || []).filter((t: string) => !callerTags.includes(t));
+    const newTags = [...otherTags, tag];
     await fetch(`${BASE_URL}/contacts/${contactId}/`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ tags: newTags }),
     });
-    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, status } : c));
+    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, tags: newTags } : c));
+  };
+
+  const getCallerTag = (contact: any) => {
+    const callerTags = ['interested', 'not-interested', 'call-later'];
+    return (contact.tags || []).find((t: string) => callerTags.includes(t)) || null;
   };
 
   const filtered = contacts.filter(c => {
@@ -164,16 +174,23 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
                     </p>
                   )}
 
-                  {/* Status Update */}
-                  <div className="mb-3">
-                    <Select value={contact.status} onValueChange={val => updateStatus(contact.id, val)}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEAD_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                  {/* Caller Tag Buttons */}
+                  <div className="flex gap-2 mb-3">
+                    {[
+                      { tag: 'interested', label: 'Interested', active: 'bg-emerald-600 text-white', inactive: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' },
+                      { tag: 'not-interested', label: 'Not Interested', active: 'bg-red-500 text-white', inactive: 'border-red-300 text-red-600 hover:bg-red-50' },
+                      { tag: 'call-later', label: 'Call Later', active: 'bg-orange-500 text-white', inactive: 'border-orange-300 text-orange-600 hover:bg-orange-50' },
+                    ].map(({ tag, label, active, inactive }) => (
+                      <button
+                        key={tag}
+                        onClick={() => updateTag(contact.id, tag)}
+                        className={`flex-1 text-xs py-1.5 rounded-lg border font-medium transition-colors ${
+                          getCallerTag(contact) === tag ? active : inactive
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Actions */}

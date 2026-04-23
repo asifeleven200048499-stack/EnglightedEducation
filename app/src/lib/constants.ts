@@ -66,6 +66,7 @@ export const CONTACT_TAGS: { value: ContactTag; label: string; description: stri
   { value: 'cold', label: 'Cold', description: 'Low engagement' },
   { value: 'interested', label: 'Interested', description: 'Actively interested' },
   { value: 'not-interested', label: 'Not Interested', description: 'Declined or opted out' },
+  { value: 'call-later', label: 'Call Later', description: 'Asked to be called later' },
   { value: 'follow-up', label: 'Follow-up', description: 'Needs follow-up' },
   { value: 'vip', label: 'VIP', description: 'High-value prospect' },
   { value: 'do-not-disturb', label: 'DND', description: 'Do not contact' }
