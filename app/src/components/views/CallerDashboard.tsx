@@ -15,6 +15,31 @@ import type { LoginUser } from './LoginView';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://enlightedleads.onrender.com/api';
 
+const PLACE_COLLEGES: Record<string, string[]> = {
+  Bangalore: [
+    'CHRIST COLLEGE', 'ALLIANCE COLLEGE', 'PRESIDENCY COLLEGE', 'REVA COLLEGE',
+    'BGS AND SJB COLLEGE', 'SAPTHAGIRI COLLEGE', 'EAST POINT COLLEGE', 'ACHARYA COLLEGE',
+    'KOSHYS GROUP OF INSTITUTION', 'YENEPOYA UNIVERSITY', 'HILLSIDE COLLEGE',
+    'BRINDAVAN COLLEGE', 'RR COLLEGE', 'ABBS COLLEGE', 'HKBK COLLEGE', 'SEA COLLEGE',
+    'PADMASHREE COLLEGE', 'OXFORD COLLEGE', 'S-VYASA COLLEGE', 'PES COLLEGE',
+    'CHRISTIAN COLLEGE', 'JUPITER COLLEGE', 'SURYA COLLEGE', 'NALAPAD COLLEGE OF NURSING',
+    'ABHAYA COLLEGE', 'HEARTLAND COLLEGE', 'NAVANEETHAM COLLEGE', 'FLORENCE COLLEGE',
+    'SMT LAKSHMIDEVI COLLEGE',
+  ],
+  Mangalore: [
+    'YENEPOYA COLLEGE', 'SRINIVAS COLLEGE', 'SRIDEVI COLLEGE', 'ALOYSIUS COLLEGE',
+    'P.A COLLEGE', 'AGNES COLLEGE', 'AJ COLLEGE OF ENGINEERING', 'INDIANA MEDICAL COLLEGE',
+    'ALIYAH COLLEGE OF NURSING', 'UNITY MEDICAL COLLEGE', 'VIDYA COLLEGE OF NURSING',
+    'SAHAYADRI COLLEGE OF NURSING', 'PRAGATHY COLLEGE OF NURSING', 'CITY COLLEGE OF NURSING',
+    'ATHENA GROUP OF INSTITUTION',
+  ],
+  Kerala: [
+    'KMM (KOCHI)', 'AL AZHAR (IDUKKI)', 'METS (CALICUT)', 'MES (KOCHI)',
+    'ELIMS (THRISSUR)', 'JAIN (KOCHI)', 'INDIRA GANDHI (KOCHI)', 'YMBC (KOCHI)',
+    'CHINMAYA VISHWA (KOCHI)', 'JAI BHARATH (KOCHI)',
+  ],
+};
+
 interface CallerDashboardProps {
   user: LoginUser & { type: 'caller' };
   onLogout: () => void;
@@ -26,7 +51,7 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [formContact, setFormContact] = useState<any | null>(null);
-  const [formData, setFormData] = useState({ name: '', address: '', interestedPlace: '', interestedColleges: '', interestedCourses: '' });
+  const [formData, setFormData] = useState({ name: '', address: '', interestedPlace: '', interestedColleges: [] as string[], interestedCourses: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -38,15 +63,36 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
 
   const handleLogout = () => onLogout();
 
+  const handleCall = async (contact: any) => {
+    const callCount = (contact.customFields?.callCount || 0) + 1;
+    const updatedFields = { ...contact.customFields, callCount };
+    await fetch(`${BASE_URL}/contacts/${contact.id}/`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customFields: updatedFields }),
+    });
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, customFields: updatedFields } : c));
+    window.location.href = `tel:${contact.phone}`;
+  };
+
   const openForm = (contact: any) => {
     setFormContact(contact);
     setFormData({
       name: contact.name || '',
       address: contact.customFields?.address || '',
       interestedPlace: contact.customFields?.interestedPlace || '',
-      interestedColleges: contact.customFields?.interestedColleges || '',
+      interestedColleges: contact.customFields?.interestedColleges || [],
       interestedCourses: contact.customFields?.interestedCourses || '',
     });
+  };
+
+  const toggleCollege = (college: string) => {
+    setFormData(p => ({
+      ...p,
+      interestedColleges: p.interestedColleges.includes(college)
+        ? p.interestedColleges.filter(c => c !== college)
+        : [...p.interestedColleges, college],
+    }));
   };
 
   const saveForm = async () => {
@@ -212,10 +258,10 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
                     <Button
                       size="sm"
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => window.location.href = `tel:${contact.phone}`}
+                      onClick={() => handleCall(contact)}
                     >
                       <Phone className="w-4 h-4 mr-2" />
-                      Call
+                      Call {contact.customFields?.callCount ? `(${contact.customFields.callCount})` : ''}
                     </Button>
                     <Button
                       size="sm"
@@ -243,7 +289,7 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
 
       {/* Student Form Modal */}
       <Dialog open={!!formContact} onOpenChange={() => setFormContact(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
           </DialogHeader>
@@ -258,15 +304,39 @@ export function CallerDashboard({ user, onLogout }: CallerDashboardProps) {
             </div>
             <div>
               <Label>Interested Place</Label>
-              <Input value={formData.interestedPlace} onChange={e => setFormData(p => ({ ...p, interestedPlace: e.target.value }))} placeholder="e.g. Bangalore, Mangalore" />
+              <Select value={formData.interestedPlace} onValueChange={val => setFormData(p => ({ ...p, interestedPlace: val, interestedColleges: [] }))}>
+                <SelectTrigger><SelectValue placeholder="Select place" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bangalore">Bangalore</SelectItem>
+                  <SelectItem value="Mangalore">Mangalore</SelectItem>
+                  <SelectItem value="Kerala">Kerala</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label>Interested Colleges</Label>
-              <Textarea value={formData.interestedColleges} onChange={e => setFormData(p => ({ ...p, interestedColleges: e.target.value }))} placeholder="e.g. Christ University, REVA" rows={2} />
-            </div>
+            {formData.interestedPlace && (
+              <div>
+                <Label>Interested Colleges</Label>
+                <div className="mt-2 max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                  {PLACE_COLLEGES[formData.interestedPlace].map(college => (
+                    <label key={college} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.interestedColleges.includes(college)}
+                        onChange={() => toggleCollege(college)}
+                        className="accent-emerald-600"
+                      />
+                      {college}
+                    </label>
+                  ))}
+                </div>
+                {formData.interestedColleges.length > 0 && (
+                  <p className="text-xs text-emerald-600 mt-1">{formData.interestedColleges.length} selected</p>
+                )}
+              </div>
+            )}
             <div>
               <Label>Interested Courses</Label>
-              <Textarea value={formData.interestedCourses} onChange={e => setFormData(p => ({ ...p, interestedCourses: e.target.value }))} placeholder="e.g. B.Tech, MBBS" rows={2} />
+              <Textarea value={formData.interestedCourses} onChange={e => setFormData(p => ({ ...p, interestedCourses: e.target.value }))} placeholder="e.g. B.Tech, MBBS, B.Com" rows={2} />
             </div>
             <div className="flex gap-2 pt-1">
               <Button onClick={saveForm} disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
