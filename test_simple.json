@@ -1,0 +1,8 @@
+{
+  "messaging_product": "whatsapp",
+  "to": "+96879369103",
+  "type": "text",
+  "text": {
+    "body": "Test message from Enlighted Education"
+  }
+}
